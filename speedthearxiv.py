@@ -8,25 +8,36 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    allsections = False
-    maxresults = 200
-    pastdays = 365
+    allsections = False # check all categories?
+    maxresults = 200 # max number of results shown
+    pastdays = 365 # number of days to check from today
+    ####################
+    # andor vars decide how to search for keyauthors and keywords
+    # they can take the value "+OR+", "+AND+", "+ANDNOT+"
+    # "+OR+" -> select all the results with ANY of the keys
+    # "+AND+" -> select all the results with ALL the keys
+    # "+ANDNOT+" -> select all the result with none of the keys
+    andor_sections = "+OR+"
+    andor_keyauthors = "+OR+"
+    andor = "+OR+"
+    andor_keywords = "+OR+"
+    ####################
     with open('keys.txt', 'r') as file:
         stringkeys = file.read()
     sections = stringkeys.partition("SECTIONS:\n")[2].partition("\n")[0].split(',')
     keyauthors = stringkeys.partition("KEYAUTHORS:\n")[2].partition("\n")[0].split(',')
     keywords = stringkeys.partition("KEYWORDS:\n")[2].partition("\n")[0].split(',')
     if allsections:
-        query = "+OR+".join("au:"+keyauthor for keyauthor in keyauthors)
-        query += "+OR+"
-        query += "+OR+".join("all:"+"\""+keyword+"\"" for keyword in keywords)
+        query = andor_keyauthors.join("au:"+keyauthor for keyauthor in keyauthors)
+        query += andor
+        query += andor_keywords.join("all:"+"\""+keyword+"\"" for keyword in keywords)
     else:
-        query = "+OR+".join("cat:"+section for section in sections)
-        query += "+AND+%28" # +AND+(
-        query += "+OR+".join("au:"+keyauthor for keyauthor in keyauthors)
-        query += "+OR+"
-        query += "+OR+".join("all:"+"\""+keyword+"\"" for keyword in keywords)
-        query += "%29" # )
+        query = andor_sections.join("cat:"+section for section in sections)
+        query += "+AND+%28" # "+AND+("
+        query += andor_keyauthors.join("au:"+keyauthor for keyauthor in keyauthors)
+        query += andor
+        query += andor_keywords.join("all:"+"\""+keyword+"\"" for keyword in keywords)
+        query += "%29" # ")"
     query = query.replace(" ", "%20")
     feeds = feedparser.parse("https://export.arxiv.org/api/query?search_query="+query+"&start=0&max_results="+str(maxresults)+"&sortBy=submittedDate&sortOrder=descending")
     papers = []
@@ -52,4 +63,4 @@ def index():
 webbrowser.open('http://localhost:5000/', new=2)
 
 if __name__ == "__main__":
-    app.run(debug='off')
+    app.run()

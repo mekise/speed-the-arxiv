@@ -37,14 +37,14 @@ def index():
             authors = ", ".join(author.name for author in entry.authors)
             summary = entry.summary
             date = entry.updated[0:10]
-            category = entry.category
+            category = ", ".join(ele for ele in entry.category.split('.'))
             pdf_url = entry.link
             papers.append({
                 "title": title,
                 "authors": authors,
                 "summary": summary,
                 "date": date,
-                "category": ", ".join(ele for ele in category.split('.')),
+                "category": category,
                 "pdf_url": pdf_url
             })
     return render_template("index.html", papers=papers)

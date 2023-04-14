@@ -1,0 +1,6 @@
+SECTIONS:
+math.AT,math.NA,math.CO,cs.LG,cs.CC,cs.CG,quant-ph
+KEYAUTHORS:
+coles,babbush,cirac
+KEYWORDS:
+nisq,adiabatic machine learning

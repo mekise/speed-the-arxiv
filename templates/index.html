@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedTheArxiv</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
+    <style>
+        a:link {
+            color: lightgray;
+            background-color: transparent;
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: lightgray;
+            background-color: transparent;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #fae6d2;
+            background-color: transparent;
+            text-decoration: underline;
+        }
+
+        a:active {
+            color: green;
+            background-color: transparent;
+            text-decoration: underline;
+        }
+
+        body {
+            background-color: #32343d;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .paper {
+            margin-bottom: 20px;
+        }
+
+        .paper h3 {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .paper .authors {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .collapsible {
+            background-color: transparent;
+            color: lightgray;
+            cursor: pointer;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        .active, .collapsible:hover {
+            color: #777;
+        }
+
+        .content {
+            padding: 0 10px;
+            display: none;
+            overflow: hidden;
+        }
+
+        .content .summary {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center my-5">SpeedTheArxiv</h1>
+        {% for paper in papers %}
+        <div class="paper">
+            <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
+            <p class="authors">{{ paper.authors }}</p>
+            <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
+            <button type="button" class="collapsible">Abstract</button>
+            <div class="content">
+                <p class="summary">{{ paper.summary }}</p>
+            </div>
+        </div>
+        <hr style="background-color:gray; margin-bottom: 30px;">
+        {% endfor %}
+    </div>
+</body>
+
+<script>
+var coll = document.getElementsByClassName("collapsible");
+var i;
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+</script>
+
+</html>

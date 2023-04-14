@@ -4,3 +4,7 @@ KEYAUTHORS:
 coles,babbush,cirac
 KEYWORDS:
 nisq,adiabatic machine learning
+
+
+ADDITIONAL KEYS - these are words that we might want to keep here for convenience. These words are NOT checked by the script.
+vqa,quantum encoding

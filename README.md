@@ -3,7 +3,10 @@ It is common practice to read the Arxiv periodically, checking the same sections
 How to use it:
 1. Clone the repo or download
 2. Change the keys in keys.txt. Do NOT insert spaces around the commas between entries and do NOT change the template.
-3. Run speedthearxiv.py
+3. Run "python speedthearxiv.py" in the terminal
 
 Dependencies:
 You will need flask, datetime, feedparser. Run a quick "pip install flask datetime feedparser" to have everything you need.
+
+This is what it looks like when you run it:
+![speedthearxiv.png](https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv.png?raw=true)

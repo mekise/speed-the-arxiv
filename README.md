@@ -3,7 +3,7 @@ Quick Python+HTML to check the latest on the Arxiv. Flask to query the Arxiv API
 
 How to use it:
 1. Clone the repo or download
-2. Change the keys in keys.txt. Do NOT insert spaces between entries and do NOT change the template.
+2. Change the keys in keys.txt. Do NOT insert spaces around the commas between entries and do NOT change the template.
 3. Run speedthearxiv.py
 
 Dependencies:

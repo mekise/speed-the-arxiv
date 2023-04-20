@@ -5,78 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeedTheArxiv</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="static/custom.css">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
-    <style>
-        a:link {
-            color: lightgray;
-            background-color: transparent;
-            text-decoration: none;
-        }
-
-        a:visited {
-            color: lightgray;
-            background-color: transparent;
-            text-decoration: none;
-        }
-
-        a:hover {
-            color: #fae6d2;
-            background-color: transparent;
-            text-decoration: underline;
-        }
-
-        a:active {
-            color: green;
-            background-color: transparent;
-            text-decoration: underline;
-        }
-
-        body {
-            background-color: #32343d;
-            color: #fff;
-            font-family: 'Roboto', sans-serif;
-        }
-
-        .paper {
-            margin-bottom: 20px;
-        }
-
-        .paper h3 {
-            font-size: 1.4rem;
-            font-weight: 500;
-            margin-bottom: 10px;
-        }
-
-        .paper .authors {
-            font-size: 1rem;
-            margin-bottom: 10px;
-        }
-
-        .collapsible {
-            background-color: transparent;
-            color: lightgray;
-            cursor: pointer;
-            border: none;
-            text-align: left;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        .active, .collapsible:hover {
-            color: #777;
-        }
-
-        .content {
-            padding: 0 10px;
-            display: none;
-            overflow: hidden;
-        }
-
-        .content .summary {
-            font-size: 1rem;
-            line-height: 1.5;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -86,7 +16,11 @@
             <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
             <p class="authors">{{ paper.authors }}</p>
             <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
-            <button type="button" class="collapsible">Abstract</button>
+            {% if runscirate %}
+                <button type="button" class="collapsible">Abstract - Scirate: {{ paper.scirate }}</button>
+            {% else %}
+                <button type="button" class="collapsible">Abstract</button>
+            {% endif %}
             <div class="content">
                 <p class="summary">{{ paper.summary }}</p>
             </div>

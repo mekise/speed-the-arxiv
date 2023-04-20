@@ -3,13 +3,15 @@ from flask import Flask, render_template
 import feedparser
 import webbrowser
 import datetime as dt
+from scirate.client import ScirateClient
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
     allsections = False # check all categories?
-    maxresults = 200 # max number of results shown
+    runscirate = False
+    maxresults = 100 # max number of results shown
     pastdays = 365 # number of days to check from today
     ####################
     # andor vars decide how to search for keyauthors and keywords
@@ -50,15 +52,19 @@ def index():
             date = entry.updated[0:10]
             category = ", ".join(ele for ele in entry.category.split('.'))
             pdf_url = entry.link
+            scirate = 0
+            if runscirate:
+                scirate = ScirateClient().paper(entry.id.partition("http://arxiv.org/abs/")[2]).scites
             papers.append({
                 "title": title,
                 "authors": authors,
                 "summary": summary,
                 "date": date,
                 "category": category,
-                "pdf_url": pdf_url
+                "pdf_url": pdf_url,
+                "scirate": scirate
             })
-    return render_template("index.html", papers=papers)
+    return render_template("index.html", papers=papers, runscirate=runscirate)
 
 webbrowser.open('http://localhost:5000/', new=2)
 

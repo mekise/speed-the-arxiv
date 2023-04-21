@@ -4,6 +4,7 @@ max_results: 100 # max number of results shown
 past_days: 20 # number of days to check from today
 all_sections: false # check all categories?
 run_scirate: true # fetch scirates?
+literal: true # literal search of keywords
 
 # andor vars decide how to search for keyauthors and keywords
 # they can take the value "+OR+", "+AND+", "+ANDNOT+"

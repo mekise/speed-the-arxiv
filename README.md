@@ -1,8 +1,8 @@
 # speed-the-arxiv
-It is common practice to read the Arxiv periodically, checking the same sections, the same keywords, and the same authors. For this reason, I have written this Python script. Together with a little HTML, it checks the latest on the Arxiv based on sections, keywords and authors of choice. These keys are stored as txt file and reused everytime you run the script. It uses Flask to query the Arxiv API and it shows the results in a no-fuss HTML page. It includes collapsible abstracts and links to the articles. In addition, it checks and associate the Scirates to each article (using the Python pkg Scirate).</p>
+It is common practice to read the Arxiv periodically, checking the same sections, the same keywords, and the same authors. For this reason, I have written this Python script. Together with a little HTML, it checks the latest on the Arxiv based on sections, keywords and authors of choice. These keys are stored in the config.yaml file and reused everytime you run the script. Some additional parameters in the file let you personalize the search criteria. The script uses Flask to query the Arxiv API and it shows the results in a no-fuss HTML page. It includes collapsible abstracts and links to the articles. If needed, it checks and associate the Scirates to each article (using the Python pkg Scirate).</p>
 How to use it:
 1. Clone the repo or download
-2. Change the keys in keys.txt. Do NOT insert spaces around the commas between entries and do NOT change the template.
+2. Change the keys and/or parameters in the config.yaml file
 3. Run "python speedthearxiv.py" in the terminal
 
 Dependencies:

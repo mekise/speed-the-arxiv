@@ -16,8 +16,8 @@
             <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
             <p class="authors">{{ paper.authors }}</p>
             <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
-            {% if runscirate %}
-                <button type="button" class="collapsible">Abstract - Scirate: {{ paper.scirate }}</button>
+            {% if run_scirate %}
+                <button type="button" class="collapsible">Abstract | Scirate: {{ paper.scirate }}</button>
             {% else %}
                 <button type="button" class="collapsible">Abstract</button>
             {% endif %}

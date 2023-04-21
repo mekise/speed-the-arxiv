@@ -1,0 +1,23 @@
+# config.yaml
+
+max_results: 100 # max number of results shown
+past_days: 20 # number of days to check from today
+all_sections: false # check all categories?
+run_scirate: true # fetch scirates?
+
+# andor vars decide how to search for keyauthors and keywords
+# they can take the value "+OR+", "+AND+", "+ANDNOT+"
+# "+OR+" -> select all the results with ANY of the keys
+# "+AND+" -> select all the results with ALL the keys
+# "+ANDNOT+" -> select all the result with none of the keys
+and_or_sections: "+OR+"
+and_or_keyauthors: "+OR+"
+and_or: "+OR+"
+and_or_keywords: "+OR+"
+
+keys:
+    sections: [math.AT, math.NA, math.CO, cs.LG, cs.CC, cs.CG, quant-ph]
+    keyauthors: [coles, babbush, cirac]
+    keywords: [nisq, adiabatic]
+
+# additional keys: vqa, encoding

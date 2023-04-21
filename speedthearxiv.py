@@ -15,6 +15,7 @@ def index():
     max_results = config['max_results']
     past_days = config['past_days']
     all_sections = config['all_sections']
+    literal = config['literal']
     run_scirate = config['run_scirate']
     and_or_sections = config['and_or_sections']
     and_or_keyauthors = config['and_or_keyauthors']
@@ -25,15 +26,17 @@ def index():
     keywords = config['keys']['keywords']
     query_sections = [f"cat:{section}" for section in sections]
     query_keyauthors = [f"au:{keyauthor}" for keyauthor in keyauthors]
-    query_keywords = [f"all:{keyword}" for keyword in keywords]
+    if literal:
+        query_keywords = [f"all:\"{keyword}\"" for keyword in keywords]
+    else:
+        query_keywords = [f"all:{keyword}" for keyword in keywords]
     if all_sections:
         query = and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords)
     else:
-        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(keyauthors) + and_or + and_or_keywords.join(query_keywords) + "%29"
+        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords) + "%29"
     query = query.replace(" ", "%20")
     url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}&sortBy=submittedDate&sortOrder=descending"
     response = requests.get(url)
-    feeds = feedparser.parse("https://export.arxiv.org/api/query?search_query="+query+"&start=0&max_results="+str(max_results)+"&sortBy=submittedDate&sortOrder=descending")
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
         papers = []

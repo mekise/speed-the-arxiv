@@ -2,9 +2,9 @@ import yaml
 from flask import Flask, render_template
 import requests
 import feedparser
+import re
 import webbrowser
 import datetime as dt
-from scirate.client import ScirateClient
 
 app = Flask(__name__)
 
@@ -59,7 +59,12 @@ def process_entry(entry, past_days, run_scirate):
         pdf_url = entry.link
         scirate = 0
         if run_scirate:
-            scirate = ScirateClient().paper(entry.id.partition("http://arxiv.org/abs/")[2]).scites
+            response = requests.get("https://scirate.com/arxiv/"+entry.id.partition("http://arxiv.org/abs/")[2])
+            if response.status_code == 200:
+                string_to_parse = feedparser.parse(response.text)['feed']['summary']
+                scirate = re.findall('<button class="btn btn-default count">\\s*(\\d+)\\s*<\\/button', string_to_parse)[0]
+            else:
+                scirate = "-"
         return {
             "title": title,
             "authors": authors,

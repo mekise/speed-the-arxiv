@@ -14,6 +14,8 @@ def index():
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
+    sorting = config['sorting']
+    sorting_rev = config['sorting_rev']
     all_sections = config['all_sections']
     literal = config['literal']
     run_scirate = config['run_scirate']
@@ -44,9 +46,20 @@ def index():
             paper = process_entry(entry, past_days, run_scirate)
             if paper:
                 papers.append(paper)
+        papers.sort(key=lambda x:tuple([x[ele] for ele in sorting]), reverse=sorting_rev)
         return render_template("index.html", papers=papers, run_scirate=run_scirate)
     else:
         pass
+
+def parse_scirate(entry):
+    scirate = 0
+    response = requests.get("https://scirate.com/arxiv/"+entry.id.partition("http://arxiv.org/abs/")[2])
+    if response.status_code == 200:
+        string_to_parse = feedparser.parse(response.text)['feed']['summary']
+        scirate = re.findall('<button class="btn btn-default count">\\s*(\\d+)\\s*<\\/button', string_to_parse)[0]
+    else:
+        scirate = -1
+    return int(scirate)
 
 def process_entry(entry, past_days, run_scirate):
     checkdate = [ele for ele in entry.updated[0:10].split('-')]
@@ -59,12 +72,7 @@ def process_entry(entry, past_days, run_scirate):
         pdf_url = entry.link
         scirate = 0
         if run_scirate:
-            response = requests.get("https://scirate.com/arxiv/"+entry.id.partition("http://arxiv.org/abs/")[2])
-            if response.status_code == 200:
-                string_to_parse = feedparser.parse(response.text)['feed']['summary']
-                scirate = re.findall('<button class="btn btn-default count">\\s*(\\d+)\\s*<\\/button', string_to_parse)[0]
-            else:
-                scirate = "-"
+            scirate = parse_scirate(entry)
         return {
             "title": title,
             "authors": authors,

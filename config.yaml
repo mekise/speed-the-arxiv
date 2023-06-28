@@ -2,7 +2,7 @@
 
 max_results: 100 # max number of results shown
 past_days: 20 # number of days to check from today
-sorting: ['date', 'scirate'] # sorts the entries# sorts the entries: title, date, scirate, category
+sorting: ['date', 'scirate'] # possible options: title, date, scirate, category
 sorting_rev: true # true: descending order, false: ascending order
 all_sections: false # check all categories?
 run_scirate: true # fetch scirates?

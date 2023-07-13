@@ -6,7 +6,7 @@ How to use it:
 3. Run "python speedthearxiv.py" in the terminal
 
 Dependencies:
-You will need flask, datetime, feedparser, requests. Run a quick "pip install flask datetime feedparser requests" to have everything you need.
+You will need flask, datetime, feedparser, requests, yaml. Run a quick "pip install flask datetime feedparser requests yaml" to have everything you need.
 
 This is what it looks like when you run it:
 

@@ -1,3 +1,4 @@
+import sys
 import yaml
 from flask import Flask, render_template
 import requests
@@ -10,7 +11,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    with open('config.yaml', 'r') as file:
+    with open(sys.argv[1], 'r') as file:
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
@@ -85,6 +86,10 @@ def process_entry(entry, past_days, run_scirate):
     else:
         return None
 
-webbrowser.open('http://localhost:5000/', new=2)
+# if __name__ == "__main__":
+#     app.run()
+
 if __name__ == "__main__":
-    app.run()
+    from waitress import serve
+    webbrowser.open('http://localhost:8080/', new=2)
+    serve(app, host="0.0.0.0", port=8080)

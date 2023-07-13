@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    with open(sys.argv[1], 'r') as file:
+    with open(sys.argv[1]+'.yaml', 'r') as file:
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']

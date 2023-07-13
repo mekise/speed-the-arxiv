@@ -5,7 +5,7 @@ past_days: 20 # number of days to check from today
 sorting: ['date', 'scirate'] # possible options: title, date, scirate, category
 sorting_rev: true # true: descending order, false: ascending order
 all_sections: false # check all categories?
-run_scirate: true # fetch scirates?
+run_scirate: false # fetch scirates?
 literal: true # literal search of keywords
 
 # andor vars decide how to search for keyauthors and keywords
@@ -19,6 +19,8 @@ and_or: "+OR+"
 and_or_keywords: "+OR+"
 
 keys:
+    # if you do not want to specify some keys, put [00]
+    # DO NOT leave the brackets blank []
     sections: [math.AT, math.NA, math.CO, cs.LG, cs.CC, cs.CG, quant-ph]
     keyauthors: [coles, babbush, cirac]
     keywords: [nisq, adiabatic]

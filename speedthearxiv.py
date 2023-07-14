@@ -7,11 +7,16 @@ import re
 import webbrowser
 import datetime as dt
 
+app_port = 8080
 app = Flask(__name__)
+
+# @app.route("/")
+# def index():
+#     return render_template("index.html")
 
 @app.route("/")
 def index():
-    with open(sys.argv[1]+'.yaml', 'r') as file:
+    with open('search/'+sys.argv[1]+'.yaml', 'r') as file:
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
@@ -91,5 +96,5 @@ def process_entry(entry, past_days, run_scirate):
 
 if __name__ == "__main__":
     from waitress import serve
-    webbrowser.open('http://localhost:8080/', new=2)
-    serve(app, host="0.0.0.0", port=8080)
+    webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
+    serve(app, host="0.0.0.0", port=app_port)

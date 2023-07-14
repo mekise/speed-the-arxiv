@@ -1,50 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeedTheArxiv</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="static/custom.css">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="container">
-        <h1 class="text-center my-5">SpeedTheArxiv <a href="https://www.stefanoscali.xyz"; target="_blank"; style="font-size: 1rem;">by Stefano Scali</a></h1>
-        {% for paper in papers %}
-        <div class="paper">
-            <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
-            <p class="authors">{{ paper.authors }}</p>
-            <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
-            {% if run_scirate %}
-                <button type="button" class="collapsible">Abstract | Scirate: {{ paper.scirate }}</button>
-            {% else %}
-                <button type="button" class="collapsible">Abstract</button>
-            {% endif %}
-            <div class="content">
-                <p class="summary">{{ paper.summary }}</p>
-            </div>
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="topmargin">
+    {% for paper in papers %}
+    <div class="paper">
+        <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
+        <p class="authors">{{ paper.authors }}</p>
+        <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
+        {% if run_scirate %}
+            <button type="button" class="collapsible">Abstract | Scirate: {{ paper.scirate }}</button>
+        {% else %}
+            <button type="button" class="collapsible">Abstract</button>
+        {% endif %}
+        <div class="content">
+            <p class="summary">{{ paper.summary }}</p>
         </div>
-        <hr style="background-color:gray; margin-bottom: 30px;">
-        {% endfor %}
     </div>
-</body>
+    <hr style="background-color:gray; margin-bottom: 30px;">
+    {% endfor %}
+</div>
+{% endblock %}
 
 <script>
-var coll = document.getElementsByClassName("collapsible");
-var i;
-
-for (i = 0; i < coll.length; i++) {
-  coll[i].addEventListener("click", function() {
-    this.classList.toggle("active");
-    var content = this.nextElementSibling;
-    if (content.style.display === "block") {
-      content.style.display = "none";
-    } else {
-      content.style.display = "block";
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+            content.style.display = "none";
+            } else {
+            content.style.display = "block";
+            }
+        });
     }
-  });
-}
 </script>
-
-</html>

@@ -28,6 +28,19 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
+nav {
+    background-color: #32343d;
+}
+
+.speedthearxiv {
+    font-size: 3.2rem;
+    font-family: 'VT323', monospace;
+}
+
+.topmargin {
+    margin-top: 120px;
+}
+
 .paper {
     margin-bottom: 20px;
 }

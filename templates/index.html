@@ -1,39 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>speed-the-arxiv</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeedTheArxiv</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="static/custom.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center my-5">SpeedTheArxiv <a href="https://www.stefanoscali.xyz"; target="_blank"; style="font-size: 1rem;">by Stefano Scali</a></h1>
-        {% for paper in papers %}
-        <div class="paper">
-            <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
-            <p class="authors">{{ paper.authors }}</p>
-            <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
-            {% if run_scirate %}
-                <button type="button" class="collapsible">Abstract | Scirate: {{ paper.scirate }}</button>
-            {% else %}
-                <button type="button" class="collapsible">Abstract</button>
-            {% endif %}
-            <div class="content">
-                <p class="summary">{{ paper.summary }}</p>
+        <nav class="navbar fixed-top">
+            <div class="container justify-content-center">
+                <h1 class="speedthearxiv"><a href="/about"; style="font-family: 'Roboto', sans-serif; font-size: 1rem;">about</a> speed-the-arxiv <a href="https://www.stefanoscali.xyz"; target="_blank"; style="font-family: 'Roboto', sans-serif; font-size: 1rem;">by Stefano Scali</a></h1>
             </div>
+        </nav>
+        <div class="topmargin">
+            {% for paper in papers %}
+            <div class="paper">
+                <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
+                <p class="authors">{{ paper.authors }}</p>
+                <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
+                {% if run_scirate %}
+                    <button type="button" class="collapsible">Abstract | Scirate: {{ paper.scirate }}</button>
+                {% else %}
+                    <button type="button" class="collapsible">Abstract</button>
+                {% endif %}
+                <div class="content">
+                    <p class="summary">{{ paper.summary }}</p>
+                </div>
+            </div>
+            <hr style="background-color:gray; margin-bottom: 30px;">
+            {% endfor %}
         </div>
-        <hr style="background-color:gray; margin-bottom: 30px;">
-        {% endfor %}
     </div>
 </body>
 
 <script>
 var coll = document.getElementsByClassName("collapsible");
 var i;
-
 for (i = 0; i < coll.length; i++) {
   coll[i].addEventListener("click", function() {
     this.classList.toggle("active");

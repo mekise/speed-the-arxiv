@@ -7,8 +7,8 @@ If needed, it checks and associates the Scirates to each article (fetching the s
 
 ### How to use it:
 1. Clone the repo or download
-2. Change the keys and/or parameters in the config.yaml file (**NB:** you can create different versions of the config.yaml file to have ready-to-use search criteria. Just call the right yaml file when you run the script.)
-3. Run "python speedthearxiv.py" in the terminal
+2. Change the keys and/or parameters in the search/config.yaml file (**NB:** you can create different versions of the config.yaml file to have ready-to-use search criteria. Just call the right yaml file when you run the script.)
+3. Run "python speedthearxiv.py config" in the terminal
 
 ### Dependencies:
 You will need flask, waitress, datetime, feedparser, requests, pyyaml. To have everything you need, run in the terminal:

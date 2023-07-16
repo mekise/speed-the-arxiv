@@ -1,46 +1,63 @@
-a:link {
-    color: lightgray;
-    background-color: transparent;
-    text-decoration: none;
+:root {
+    --c-primary: #dfdfdf;
+    --c-secondary: #e7e7e7;
+    --c-nav: #f1e3d3;
+    --c-code: #fff;
+    --c-background: #32343d;
+    --c-link: #d3d3d3;
+    --c-hover: #fae6d2;
+    --c-active: #95be88;
+    --c-visited: #b4a5c4;
+    --c-border: #3a3c44;
+    /* change border color of bootstrap cards */
+    --bs-border-color-translucent: var(--c-border);
 }
 
-a:visited {
-    color: lightgray;
+a:link {
+    color: var(--c-link);
     background-color: transparent;
     text-decoration: none;
 }
 
 a:hover {
-    color: #fae6d2;
+    color: var(--c-hover);
     background-color: transparent;
     text-decoration: underline;
 }
 
 a:active {
-    color: #c0a386;
+    color: var(--c-active);
     background-color: transparent;
     text-decoration: underline;
 }
 
+a:visited {
+    color: var(--c-visited);
+    background-color: transparent;
+    text-decoration: none;
+}
+
 body {
-    background-color: #32343d;
-    color: #fff;
+    background-color: var(--c-background);
+    color: var(--c-primary);
     font-family: 'Roboto', sans-serif;
 }
 
 nav {
-    background-color: #32343d;
+    background-color: var(--c-background);
+    color: var(--c-nav);
 }
 
 pre {
-    color: #fff;
+    color: var(--c-code);
 }
 
 code {
-    color: #fff;
+    color: var(--c-code);
 }
 
 .speedthearxiv {
+    color: var(--c-nav);
     font-size: 3.2rem;
     font-family: 'VT323', monospace;
 }
@@ -53,10 +70,14 @@ code {
     margin-bottom: 20px;
 }
 
-.paper h3 {
+.paper .title {
     font-size: 1.4rem;
     font-weight: 500;
     margin-bottom: 10px;
+}
+
+.paper .title a:link {
+    color: var(--c-secondary);
 }
 
 .paper .authors {
@@ -66,7 +87,7 @@ code {
 
 .search {
     background-color: transparent;
-    color: lightgray;
+    color: var(--c-primary);
     cursor: pointer;
     text-align: left;
     outline: none;
@@ -74,12 +95,12 @@ code {
 }
 
 .active, .search:hover {
-    color: #fae6d2;
+    color: var(--c-hover);
 }
 
 .collapsible {
     background-color: transparent;
-    color: lightgray;
+    color: var(--c-primary);
     cursor: pointer;
     border: none;
     text-align: left;
@@ -88,12 +109,12 @@ code {
 }
 
 .active, .collapsible:hover {
-    color: #fae6d2;
+    color: var(--c-hover);
 }
 
 .search-box {
     background-color: transparent;
-    color: lightgray;
+    color: var(--c-primary);
     cursor: pointer;
     text-align: left;
     outline: none;
@@ -103,7 +124,7 @@ code {
     padding-left: 1rem;
     padding-right: 1rem;
     border-width: 0.13rem;
-    border-color: #3a3c44;
+    border-color: var(--c-border);
     border-radius: 0.3rem;
     border-style: solid;
     margin-bottom: 10pt;
@@ -111,12 +132,7 @@ code {
 }
 
 .active, .search-box:hover {
-    background-color: #3a3c44;
-}
-
-/* change border color of bootstrap cards */
-:root {
-    --bs-border-color-translucent: #3a3c44;
+    background-color: var(--c-background);
 }
 
 .card{
@@ -124,7 +140,7 @@ code {
 }
 
 .card-body {
-    background-color: #32343d;
+    background-color: var(--c-background);
 }
 
 .content {

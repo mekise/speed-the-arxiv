@@ -2,7 +2,11 @@
 
 {% block content %}
 <div class="topmargin">
-    <p>The available search files are: </p>
+    <h3>Welcome to speed-the-arxiv</h3>
+    <p><strong>NOTE:</strong> the parsing/fetching time strongly depends on the search criteria. This can easily go from 1s to 60s.
+        If you selected <code>run_scirate: true</code> or have more than <code>max_results: 100</code>, be patient!</p>
+    <br>
+    <h4>Available searches.</h4>
     {% for search_ele in search_list %}
         <button class="search search-box" value="{{ search_ele }}">{{ search_ele }}</button>
     {% endfor %}

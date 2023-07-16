@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="topmargin">
+    {% for paper in papers %}
+    <div class="paper">
+        <h3><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>
+        <p class="authors">{{ paper.authors }}</p>
+        <p class="authors">{{ paper.date }} - {{ paper.category }}</p>
+        <p>
+        {% if run_scirate %}
+            <button id="btn-scirate-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+                Abstract | Scirate: {{ paper.scirate }}
+            </button>
+        {% else %}
+            <button id="btn-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+                Abstract
+            </button>
+        {% endif %}
+        </p>
+        <div id="summary-{{ loop.index }}" class="collapse">
+            <div class="card card-body">{{ paper.summary }}</div>
+        </div>
+    </div>
+    <hr style="background-color:gray; margin-bottom: 30px;">
+    {% endfor %}
+</div>
+{% endblock %}

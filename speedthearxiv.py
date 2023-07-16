@@ -1,6 +1,7 @@
 import sys
+import os
 import yaml
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import requests
 import feedparser
 import re
@@ -10,13 +11,20 @@ import datetime as dt
 app_port = 8080
 app = Flask(__name__)
 
-# @app.route("/")
-# def index():
-#     return render_template("index.html")
-
 @app.route("/")
 def index():
-    with open('search/'+sys.argv[1]+'.yaml', 'r') as file:
+    search_list = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
+    return render_template("index.html", search_list=search_list)
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/search", methods=['POST'])
+def search():
+    if request.method == "POST":
+        data = request.get_json()
+    with open('search/'+str(data['search'])+'.yaml', 'r') as file:
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
@@ -53,7 +61,7 @@ def index():
             if paper:
                 papers.append(paper)
         papers.sort(key=lambda x:tuple([x[ele] for ele in sorting]), reverse=sorting_rev)
-        return render_template("index.html", papers=papers, run_scirate=run_scirate)
+        return render_template("search.html", papers=papers, run_scirate=run_scirate)
     else:
         pass
 
@@ -92,7 +100,7 @@ def process_entry(entry, past_days, run_scirate):
         return None
 
 # if __name__ == "__main__":
-#     app.run()
+#     app.run(debug=True)
 
 if __name__ == "__main__":
     from waitress import serve

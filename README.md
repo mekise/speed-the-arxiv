@@ -16,7 +16,7 @@
 </ul>
 <h3>Dependencies</h3>
 <p>You will need flask, waitress, datetime, feedparser, requests, pyyaml. To have everything you need, run in the terminal:</p>
-<pre><code>
+<pre><code">
     pip install flask waitress datetime feedparser requests pyyaml
 </code></pre>
 <h3>What it looks like</h3>

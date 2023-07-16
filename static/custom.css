@@ -17,7 +17,7 @@ a:hover {
 }
 
 a:active {
-    color: green;
+    color: #c0a386;
     background-color: transparent;
     text-decoration: underline;
 }
@@ -30,6 +30,14 @@ body {
 
 nav {
     background-color: #32343d;
+}
+
+pre {
+    color: #fff;
+}
+
+code {
+    color: #fff;
 }
 
 .speedthearxiv {
@@ -56,6 +64,19 @@ nav {
     margin-bottom: 10px;
 }
 
+.search {
+    background-color: transparent;
+    color: lightgray;
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+}
+
+.active, .search:hover {
+    color: #fae6d2;
+}
+
 .collapsible {
     background-color: transparent;
     color: lightgray;
@@ -67,7 +88,43 @@ nav {
 }
 
 .active, .collapsible:hover {
-    color: #777;
+    color: #fae6d2;
+}
+
+.search-box {
+    background-color: transparent;
+    color: lightgray;
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-width: 0.13rem;
+    border-color: #3a3c44;
+    border-radius: 0.3rem;
+    border-style: solid;
+    margin-bottom: 10pt;
+    margin-right: 5pt;
+}
+
+.active, .search-box:hover {
+    background-color: #3a3c44;
+}
+
+/* change border color of bootstrap cards */
+:root {
+    --bs-border-color-translucent: #3a3c44;
+}
+
+.card{
+    --bs-card-spacer-y: 0.7rem;
+}
+
+.card-body {
+    background-color: #32343d;
 }
 
 .content {

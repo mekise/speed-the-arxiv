@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="topmargin">
+    <div class="about">
+        <h3>about</h3>
+        <p> It is common practice to read the Arxiv periodically, checking the same sections, the same keywords, and the same authors.
+            For this reason, I have written this Python script. Together with a little HTML, it checks the latest on the Arxiv based on sections,
+            keywords, and authors of choice. These keys are stored in the config.yaml file and reused every time you run the script.
+            Additional parameters in the file let you personalize the search criteria. The script uses Flask to query the Arxiv API
+            and it shows the results in a no-fuss HTML page. It includes collapsible abstracts and links to the articles. If needed, it checks
+            and associates the Scirates to each article (fetching the scirates slows down the app quite a bit).</p>
+
+        <h3>how to use it</h3>
+        <ul>
+            <li>Clone the repo or download</li>
+            <li>Change the keys and/or parameters in the search/config.yaml file (NB: you can create different versions of the config.yaml file to have ready-to-use search criteria. Just call the right yaml file when you run the script.)</li>
+            <li>Run <code>python speedthearxiv.py config</code> in the terminal to run the search criteria in config.yaml</li>
+        </ul>
+        <h3>dependencies</h3>
+        <p>You will need flask, waitress, datetime, feedparser, requests, pyyaml. To have everything you need, run in the terminal:</p>
+        <pre><code">
+            pip install flask waitress datetime feedparser requests pyyaml
+        </code></pre>
+        <h3>links</h3>
+            <p>speed-the-arxiv: <a href="https://github.com/mekise/speed-the-arxiv/" target="_blank">github</a></p>
+            <p>Stefano Scali: 
+                <a href= "mailto:s.scali@exeter.ac.uk">s.scali@exeter.ac.uk</a> |
+                <a href="https://www.stefanoscali.xyz/" target="_blank">website</a> |
+                <a href="https://scholar.google.com/citations?user=j7dg-xwAAAAJ&hl=en" target="_blank">scholar</a> |
+                <a href="https://github.com/mekise" target="_blank">github</a> |
+                <a href="https://www.linkedin.com/in/stefano-scali/" target="_blank">linkedin</a> |
+                <a href="https://twitter.com/phystefano" target="_blank">twitter</a>
+            </p>
+    </div>
+</div>
+{% endblock %}

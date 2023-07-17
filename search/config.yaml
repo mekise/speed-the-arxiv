@@ -3,7 +3,6 @@
 max_results: 100 # max number of results shown
 past_days: 20 # number of days to check from today
 # past_days: 36525 # to search all the arxiv (for old papers or when arxiv_sortorder is ascending)
-all_sections: false # check all categories?
 literal: true # literal search of keywords
 run_scirate: false # fetch scirates?
 

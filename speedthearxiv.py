@@ -28,7 +28,6 @@ def search():
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
-    all_sections = config['all_sections']
     literal = config['literal']
     run_scirate = config['run_scirate']
     arxiv_sortby = config['arxiv_sortby']

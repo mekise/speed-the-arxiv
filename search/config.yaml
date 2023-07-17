@@ -32,9 +32,8 @@ and_or: "+OR+"
 and_or_keywords: "+OR+"
 
 keys:
-    # if you do not want to specify some keys, put [00]
-    # DO NOT leave the brackets blank []
-    sections: [math.AT, math.NA, math.CO, cs.LG, cs.CC, cs.CG, quant-ph]
+    # if you do not want to specify some keys, leave the list empty []
+    sections: [math.NA, cs.LG, cs.CC, cs.CG, quant-ph]
     keyauthors: [coles, babbush, cirac]
     keywords: [nisq, adiabatic]
 

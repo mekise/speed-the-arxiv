@@ -32,8 +32,8 @@ def search():
     run_scirate = config['run_scirate']
     arxiv_sortby = config['arxiv_sortby']
     arxiv_sortorder = config['arxiv_sortorder']
-    sorting = config['sorting']
-    sorting_rev = config['sorting_rev']
+    sortby = config['sortby']
+    sortorder_rev = config['sortorder_rev']
     and_or_sections = config['and_or_sections']
     and_or_keyauthors = config['and_or_keyauthors']
     and_or = config['and_or']
@@ -71,7 +71,7 @@ def search():
             paper = process_entry(entry, past_days, run_scirate)
             if paper:
                 papers.append(paper)
-        papers.sort(key=lambda x:tuple([x[ele] for ele in sorting]), reverse=sorting_rev)
+        papers.sort(key=lambda x:tuple([x[ele] for ele in sortby]), reverse=sortorder_rev)
         return render_template("search.html", papers=papers, run_scirate=run_scirate)
     else:
         pass

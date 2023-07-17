@@ -17,8 +17,8 @@ arxiv_sortorder: "descending" # "ascending"
 # how the entries are sorted (and shown) AFTER fetching them:
 # descending -> SHOW new papers first
 # ascending -> SHOW old papers first
-sorting: ['date', 'scirate'] # possible options: title, date, scirate, category
-sorting_rev: true # true: descending order, false: ascending order
+sortby: ['date', 'scirate'] # possible options: title, date, scirate, category
+sortorder_rev: true # true: descending order, false: ascending order
 
 # andor vars decide how to search for keyauthors and keywords
 # they can take the value "+OR+", "+AND+", "+ANDNOT+"

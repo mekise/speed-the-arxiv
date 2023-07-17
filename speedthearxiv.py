@@ -28,11 +28,13 @@ def search():
         config = yaml.safe_load(file)
     max_results = config['max_results']
     past_days = config['past_days']
-    sorting = config['sorting']
-    sorting_rev = config['sorting_rev']
     all_sections = config['all_sections']
     literal = config['literal']
     run_scirate = config['run_scirate']
+    arxiv_sortby = config['arxiv_sortby']
+    arxiv_sortorder = config['arxiv_sortorder']
+    sorting = config['sorting']
+    sorting_rev = config['sorting_rev']
     and_or_sections = config['and_or_sections']
     and_or_keyauthors = config['and_or_keyauthors']
     and_or = config['and_or']
@@ -46,12 +48,22 @@ def search():
         query_keywords = [f"all:\"{keyword}\"" for keyword in keywords]
     else:
         query_keywords = [f"all:{keyword}" for keyword in keywords]
-    if all_sections:
-        query = and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords)
-    else:
+    if len(sections) and len(keyauthors) and len(keywords):
         query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords) + "%29"
+    elif len(sections) and len(keyauthors):
+        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(query_keyauthors) + "%29"
+    elif len(sections) and len(keywords):
+        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keywords.join(query_keywords) + "%29"
+    elif len(keyauthors) and len(keywords):
+        query = and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords)
+    elif len(sections):
+        query = and_or_sections.join(query_sections)
+    elif len(keyauthors):
+        query = and_or_keyauthors.join(query_keyauthors)
+    elif len(keywords):
+        query = and_or_keywords.join(query_keywords)    
     query = query.replace(" ", "%20")
-    url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}&sortBy=submittedDate&sortOrder=descending"
+    url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}&sortBy={arxiv_sortby}&sortOrder={arxiv_sortorder}"
     response = requests.get(url)
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)

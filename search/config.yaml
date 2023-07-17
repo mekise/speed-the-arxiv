@@ -2,11 +2,24 @@
 
 max_results: 100 # max number of results shown
 past_days: 20 # number of days to check from today
+# past_days: 36525 # to search all the arxiv (for old papers or when arxiv_sortorder is ascending)
+all_sections: false # check all categories?
+literal: true # literal search of keywords
+run_scirate: false # fetch scirates?
+
+# sorting entries in arxiv API
+# how the entries are sorted BEFORE fetching them:
+# descending -> FETCH new papers first
+# ascending -> FETCH old papers first (also see past_days for old papers)
+arxiv_sortby: "submittedDate" # "relevance", "lastUpdatedDate"
+arxiv_sortorder: "descending" # "ascending"
+
+# sorting entries in speed-the-arxiv
+# how the entries are sorted (and shown) AFTER fetching them:
+# descending -> SHOW new papers first
+# ascending -> SHOW old papers first
 sorting: ['date', 'scirate'] # possible options: title, date, scirate, category
 sorting_rev: true # true: descending order, false: ascending order
-all_sections: false # check all categories?
-run_scirate: false # fetch scirates?
-literal: true # literal search of keywords
 
 # andor vars decide how to search for keyauthors and keywords
 # they can take the value "+OR+", "+AND+", "+ANDNOT+"
@@ -19,9 +32,8 @@ and_or: "+OR+"
 and_or_keywords: "+OR+"
 
 keys:
-    # if you do not want to specify some keys, put [00]
-    # DO NOT leave the brackets blank []
-    sections: [math.AT, math.NA, math.CO, cs.LG, cs.CC, cs.CG, quant-ph]
+    # if you do not want to specify some keys, leave the list empty []
+    sections: [math.NA, cs.LG, cs.CC, cs.CG, quant-ph]
     keyauthors: [coles, babbush, cirac]
     keywords: [nisq, adiabatic]
 

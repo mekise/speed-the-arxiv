@@ -4,6 +4,7 @@
     --c-nav: #f1e3d3;
     --c-code: #fff;
     --c-background: #32343d;
+    --c-background_card: #494855;
     --c-link: #d3d3d3;
     --c-hover: #fae6d2;
     --c-active: #95be88;
@@ -140,7 +141,7 @@ code {
 }
 
 .card-body {
-    background-color: var(--c-background);
+    background-color: var(--c-background_card);
 }
 
 .content {

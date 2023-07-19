@@ -136,6 +136,10 @@ code {
     background-color: var(--c-background);
 }
 
+.list-group {
+    margin-left: 20px;
+}
+
 .card{
     --bs-card-spacer-y: 0.7rem;
 }

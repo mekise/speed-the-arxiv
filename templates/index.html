@@ -2,13 +2,39 @@
 
 {% block content %}
 <div class="topmargin">
-    <h3>Welcome to speed-the-arxiv</h3>
     <p><strong>NOTE:</strong> the parsing/fetching time strongly depends on the search criteria. This can easily go from 1s to 60s.
         If you selected <code>run_scirate: true</code> or have more than <code>max_results: 100</code>, be patient!</p>
     <br>
-    <h4>Available searches.</h4>
+    <h4 style="margin-bottom: 20px;">Available searches:</h4>
     {% for search_ele in search_list %}
-        <button class="search search-box" value="{{ search_ele }}">{{ search_ele }}</button>
+        <button class="search search-box" value="{{ search_ele.name }}">{{ search_ele.name }}</button>
+        <button id="btn-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+            </svg>
+        </button>
+        <div id="summary-{{ loop.index }}" class="collapse">
+            <div class="card card-body">
+                <ul class="list-group">
+                    <li>max_results = {{ search_ele.max_results }}</li>
+                    <li>past_days = {{search_ele.past_days}}</li>
+                    <li>literal = {{search_ele.literal}}</li>
+                    <li>run_scirate = {{search_ele.run_scirate}}</li>
+                    <li>arxiv_sortby = {{search_ele.arxiv_sortby}}</li>
+                    <li>arxiv_sortorder = {{search_ele.arxiv_sortorder}}</li>
+                    <li>sortby = {{search_ele.sortby}}</li>
+                    <li>sortorder_rev = {{search_ele.sortorder_rev}}</li>
+                    <li>and_or_sections = {{search_ele.and_or_sections}}</li>
+                    <li>and_or_keyauthors = {{search_ele.and_or_keyauthors}}</li>
+                    <li>and_or = {{search_ele.and_or}}</li>
+                    <li>and_or_keywords = {{search_ele.and_or_keywords}}</li>
+                    <li>sections = {{search_ele.sections}}</li>
+                    <li>keyauthors = {{search_ele.keyauthors}}</li>
+                    <li>keywords = {{search_ele.keywords}}</li>
+                </ul>
+            </div>
+        </div>
+        <br>
     {% endfor %}
 </div>
 {% endblock %}

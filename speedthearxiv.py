@@ -13,7 +13,10 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    search_list = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
+    searches = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
+    search_list = []
+    for search in searches:
+        search_list.append(read_config(search))
     return render_template("index.html", search_list=search_list)
 
 @app.route("/about")
@@ -24,57 +27,63 @@ def about():
 def search():
     if request.method == "POST":
         data = request.get_json()
-    with open('search/'+str(data['search'])+'.yaml', 'r') as file:
-        config = yaml.safe_load(file)
-    max_results = config['max_results']
-    past_days = config['past_days']
-    literal = config['literal']
-    run_scirate = config['run_scirate']
-    arxiv_sortby = config['arxiv_sortby']
-    arxiv_sortorder = config['arxiv_sortorder']
-    sortby = config['sortby']
-    sortorder_rev = config['sortorder_rev']
-    and_or_sections = config['and_or_sections']
-    and_or_keyauthors = config['and_or_keyauthors']
-    and_or = config['and_or']
-    and_or_keywords = config['and_or_keywords']
-    sections = config['keys']['sections']
-    keyauthors = config['keys']['keyauthors']
-    keywords = config['keys']['keywords']
-    query_sections = [f"cat:{section}" for section in sections]
-    query_keyauthors = [f"au:{keyauthor}" for keyauthor in keyauthors]
-    if literal:
-        query_keywords = [f"all:\"{keyword}\"" for keyword in keywords]
+    config = read_config(data['search'])
+    query_sections = [f"cat:{section}" for section in config['sections']]
+    query_keyauthors = [f"au:{keyauthor}" for keyauthor in config['keyauthors']]
+    if config['literal']:
+        query_keywords = [f"all:\"{keyword}\"" for keyword in config['keywords']]
     else:
-        query_keywords = [f"all:{keyword}" for keyword in keywords]
-    if len(sections) and len(keyauthors) and len(keywords):
-        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords) + "%29"
-    elif len(sections) and len(keyauthors):
-        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keyauthors.join(query_keyauthors) + "%29"
-    elif len(sections) and len(keywords):
-        query = and_or_sections.join(query_sections) + "+AND+%28" + and_or_keywords.join(query_keywords) + "%29"
-    elif len(keyauthors) and len(keywords):
-        query = and_or_keyauthors.join(query_keyauthors) + and_or + and_or_keywords.join(query_keywords)
-    elif len(sections):
-        query = and_or_sections.join(query_sections)
-    elif len(keyauthors):
-        query = and_or_keyauthors.join(query_keyauthors)
-    elif len(keywords):
-        query = and_or_keywords.join(query_keywords)    
+        query_keywords = [f"all:{keyword}" for keyword in config['keywords']]
+    if len(config['sections']) and len(config['keyauthors']) and len(config['keywords']):
+        query = config['and_or_sections'].join(query_sections) + "+AND+%28" + config['and_or_keyauthors'].join(query_keyauthors) + config['and_or'] + config['and_or_keywords'].join(query_keywords) + "%29"
+    elif len(config['sections']) and len(config['keyauthors']):
+        query = config['and_or_sections'].join(query_sections) + "+AND+%28" + config['and_or_keyauthors'].join(query_keyauthors) + "%29"
+    elif len(config['sections']) and len(config['keywords']):
+        query = config['and_or_sections'].join(query_sections) + "+AND+%28" + config['and_or_keywords'].join(query_keywords) + "%29"
+    elif len(config['keyauthors']) and len(config['keywords']):
+        query = config['and_or_keyauthors'].join(query_keyauthors) + config['and_or'] + config['and_or_keywords'].join(query_keywords)
+    elif len(config['sections']):
+        query = config['and_or_sections'].join(query_sections)
+    elif len(config['keyauthors']):
+        query = config['and_or_keyauthors'].join(query_keyauthors)
+    elif len(config['keywords']):
+        query = config['and_or_keywords'].join(query_keywords)    
     query = query.replace(" ", "%20")
-    url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}&sortBy={arxiv_sortby}&sortOrder={arxiv_sortorder}"
+    url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={config['max_results']}&sortBy={config['arxiv_sortby']}&sortOrder={config['arxiv_sortorder']}"
     response = requests.get(url)
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
         papers = []
         for entry in feeds.entries:
-            paper = process_entry(entry, past_days, run_scirate)
+            paper = process_entry(entry, config['past_days'], config['run_scirate'])
             if paper:
                 papers.append(paper)
-        papers.sort(key=lambda x:tuple([x[ele] for ele in sortby]), reverse=sortorder_rev)
-        return render_template("search.html", papers=papers, run_scirate=run_scirate)
+        papers.sort(key=lambda x:tuple([x[ele] for ele in config['sortby']]), reverse=config['sortorder_rev'])
+        return render_template("search.html", papers=papers, search_name=config['name'], run_scirate=config['run_scirate'])
     else:
         pass
+
+def read_config(name):
+    with open('search/'+str(name)+'.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+    return {
+        "name": name,
+        "max_results": config['max_results'],
+        "past_days": config['past_days'],
+        "literal": config['literal'],
+        "run_scirate": config['run_scirate'],
+        "arxiv_sortby": config['arxiv_sortby'],
+        "arxiv_sortorder": config['arxiv_sortorder'],
+        "sortby": config['sortby'],
+        "sortorder_rev": config['sortorder_rev'],
+        "and_or_sections": config['and_or_sections'],
+        "and_or_keyauthors": config['and_or_keyauthors'],
+        "and_or": config['and_or'],
+        "and_or_keywords": config['and_or_keywords'],
+        "sections": config['keys']['sections'],
+        "keyauthors": config['keys']['keyauthors'],
+        "keywords": config['keys']['keywords']
+    }
 
 def parse_scirate(entry):
     scirate = 0
@@ -110,10 +119,10 @@ def process_entry(entry, past_days, run_scirate):
     else:
         return None
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
 if __name__ == "__main__":
-    from waitress import serve
-    webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
-    serve(app, host="0.0.0.0", port=app_port)
+    app.run(debug=True)
+
+# if __name__ == "__main__":
+#     from waitress import serve
+#     webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
+#     serve(app, host="0.0.0.0", port=app_port)

@@ -119,10 +119,10 @@ def process_entry(entry, past_days, run_scirate):
     else:
         return None
 
-if __name__ == "__main__":
-    app.run(debug=True)
-
 # if __name__ == "__main__":
-#     from waitress import serve
-#     webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
-#     serve(app, host="0.0.0.0", port=app_port)
+#     app.run(debug=True)
+
+if __name__ == "__main__":
+    from waitress import serve
+    webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
+    serve(app, host="0.0.0.0", port=app_port)

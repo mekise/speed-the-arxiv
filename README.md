@@ -9,7 +9,7 @@
 
 <h3>To-do</h3>
 <ul>
-    <li>Add a collapsible overview of .yaml parameters to the landing page.</li>
+    <li><s>Add a collapsible overview of .yaml parameters to the landing page.</s></li>
     <li>Add keys highlighting in HTML, for literal search.</li>
     <li>Add collapsible stats to the search page (keys count etc.).</li>
 </ul>

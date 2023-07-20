@@ -12,6 +12,8 @@
     <li><s>Add a collapsible overview of .yaml parameters to the landing page.</s></li>
     <li>Add keys highlighting in HTML, for literal search.</li>
     <li>Add collapsible stats to the search page (keys count etc.).</li>
+    <li>Last modified search criteria on top of search-list</li>
+    <li>Fix occasional events of primary-category/category mishandling (see https://arxiv.org/abs/2307.06627 primary-category and category)</li>
 </ul>
 
 <h3>How to use it</h3>

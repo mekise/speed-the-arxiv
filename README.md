@@ -7,6 +7,9 @@
     If needed, it checks and associates the Scirates to each article (fetching the scirates slows down the app quite a bit).
     Ajax takes care of making the search buttons and Flask talk.</p>
 
+<h3>A note on ML</h3>
+We tought about using machine learning to predict what you might be interested in, but we chose not to do so. The reason is simple, we want you to explore beyond your comfort zone. Reading exclusively ad-hoc papers found based on your past preferences does not incentivate creativity or change, keys in research. On the other hand, we want you to find something relevant to your work, without losing focus. There you have it, choose your set of parameters for your search, click the button, and start exploring.
+
 <h3>To-do</h3>
 <ul>
     <li><s>Collapsible overview of .yaml parameters to the landing page.</s></li>

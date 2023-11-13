@@ -14,6 +14,7 @@ app = Flask(__name__)
 @app.route("/")
 def index():
     searches = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
+    searches.sort(key=lambda x: os.path.getmtime('./search/'+x+'.yaml'), reverse=True)
     search_list = []
     for search in searches:
         search_list.append(read_config(search))

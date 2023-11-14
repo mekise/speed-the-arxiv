@@ -10,6 +10,7 @@
     --c-active: #95be88;
     --c-visited: #b4a5c4;
     --c-border: #3a3c44;
+    --c-highlight: #7c6186;
     /* change border color of bootstrap cards */
     --bs-border-color-translucent: var(--c-border);
 }
@@ -63,8 +64,15 @@ code {
     font-family: 'VT323', monospace;
 }
 
+.searchdata {
+    position: fixed;
+    top: 120;
+    width: 100%;
+}
+
 .topmargin {
-    margin-top: 120px;
+    /* margin-top: 120px; */
+    margin-top: 200px;
 }
 
 .paper {
@@ -157,4 +165,18 @@ code {
 .content .summary {
     font-size: 1rem;
     line-height: 1.5;
+}
+
+.toHighlight{
+    background-color: transparent;
+    color: var(--c-primary);
+    cursor: pointer;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+}
+
+.highlight {
+    background-color: var(--c-highlight);
 }

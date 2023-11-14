@@ -1,6 +1,17 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div class="container">
+    <nav class="searchdata">
+        <div class="container justify-content-center">
+            <p>
+            Search: {{ search_name }}
+            <button class="toHighlight" onclick="highlight()">Highlight keys</button>
+            </p>
+        </div>
+    </nav>
+</div>
+
 <div class="topmargin">
     {% for paper in papers %}
     <div class="paper">

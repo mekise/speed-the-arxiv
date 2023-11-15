@@ -13,7 +13,7 @@ We tought about using machine learning to predict what you might be interested i
 <h3>To-do</h3>
 <ul>
     <li><s>Collapsible overview of .yaml parameters to the landing page.</s></li>
-    <li>Keywords/keyauthors highlighting in HTML, for literal search.</li>
+    <li><s>Keywords/keyauthors highlighting in HTML, for literal search.</s></li>
     <li>Collapsible stats to the search page (keys count etc.).</li>
     <li><s>Last-modified search file on top of index page</s></li>
     <li>Fix occasional events of primary-category/category mishandling (see https://arxiv.org/abs/2307.06627 primary-category and category)</li>

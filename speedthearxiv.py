@@ -60,7 +60,7 @@ def search():
             if paper:
                 papers.append(paper)
         papers.sort(key=lambda x:tuple([x[ele] for ele in config['sortby']]), reverse=config['sortorder_rev'])
-        return render_template("search.html", papers=papers, search_name=config['name'], run_scirate=config['run_scirate'])
+        return render_template("search.html", papers=papers, keyauthors=[keyauthor for keyauthor in config["keyauthors"]], keywords=[keyword for keyword in config["keywords"]], search_name=config['name'], run_scirate=config['run_scirate'])
     else:
         pass
 

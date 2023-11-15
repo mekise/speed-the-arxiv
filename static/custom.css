@@ -10,6 +10,7 @@
     --c-active: #95be88;
     --c-visited: #b4a5c4;
     --c-border: #3a3c44;
+    --c-highlight: #7c6186;
     /* change border color of bootstrap cards */
     --bs-border-color-translucent: var(--c-border);
 }
@@ -65,6 +66,16 @@ code {
 
 .topmargin {
     margin-top: 120px;
+}
+
+.topmargin-nav {
+    margin-top: 80px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.topmargin-papers {
+    margin-top: 160px;
 }
 
 .paper {
@@ -157,4 +168,36 @@ code {
 .content .summary {
     font-size: 1rem;
     line-height: 1.5;
+}
+
+.tools {
+    background-color: transparent;
+    color: var(--c-primary);
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+}
+
+.tools-box {
+    background-color: transparent;
+    color: var(--c-primary);
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    border-width: 0.13rem;
+    border-color: var(--c-border);
+    border-radius: 0.3rem;
+    border-style: solid;
+    margin-bottom: 5pt;
+    margin-right: 5pt;
+}
+
+.highlight {
+    background-color: var(--c-highlight);
 }

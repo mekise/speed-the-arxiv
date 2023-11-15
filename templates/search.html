@@ -2,17 +2,16 @@
 
 {% block content %}
 <div class="container">
-    <nav class="searchdata">
-        <div class="container justify-content-center">
-            <p>
-            Search: {{ search_name }}
-            <button class="toHighlight" onclick="highlight()">Highlight keys</button>
-            </p>
+    <nav class="fixed-top topmargin-nav align-middle">
+        <div class="container">
+            search: {{ search_name }}.yaml &nbsp;&nbsp; - &nbsp;&nbsp;
+            <button class="tools tools-box" onclick="highlight({{ keywords }})">highlight keywords</button>
+            <button class="tools tools-box" onclick="highlight({{ keyauthors }})">highlight keyauthors</button>
         </div>
     </nav>
 </div>
 
-<div class="topmargin">
+<div class="topmargin-papers">
     {% for paper in papers %}
     <div class="paper">
         <h3 class="title"><a href="{{ paper.pdf_url }}" target="_blank">{{ paper.title }}</a></h3>

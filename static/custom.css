@@ -64,15 +64,18 @@ code {
     font-family: 'VT323', monospace;
 }
 
-.searchdata {
-    position: fixed;
-    top: 120;
-    width: 100%;
+.topmargin {
+    margin-top: 120px;
 }
 
-.topmargin {
-    /* margin-top: 120px; */
-    margin-top: 200px;
+.topmargin-nav {
+    margin-top: 80px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.topmargin-papers {
+    margin-top: 160px;
 }
 
 .paper {
@@ -167,14 +170,32 @@ code {
     line-height: 1.5;
 }
 
-.toHighlight{
+.tools {
     background-color: transparent;
     color: var(--c-primary);
     cursor: pointer;
-    border: none;
     text-align: left;
     outline: none;
     font-size: 1rem;
+}
+
+.tools-box {
+    background-color: transparent;
+    color: var(--c-primary);
+    cursor: pointer;
+    text-align: left;
+    outline: none;
+    font-size: 1rem;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    border-width: 0.13rem;
+    border-color: var(--c-border);
+    border-radius: 0.3rem;
+    border-style: solid;
+    margin-bottom: 5pt;
+    margin-right: 5pt;
 }
 
 .highlight {

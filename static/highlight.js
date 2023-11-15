@@ -1,7 +1,5 @@
-function highlight() {
-    var searchTerm = 'quantum';
-    if (!searchTerm) return;
-
+function highlight(keys) {
+    if (!keys || !Array.isArray(keys) || keys.length === 0) return;
     var hasHighlights = document.querySelector('.highlight');
     if (hasHighlights) {
         var highlights = document.querySelectorAll('.highlight');
@@ -9,13 +7,16 @@ function highlight() {
             element.classList.remove('highlight');
         });
     } else {
-        var regex = new RegExp(searchTerm, 'gi'); // global, case insensitive
-        var elementsToSearch = document.querySelectorAll('.paper'); // find within the .paper elements
-        elementsToSearch.forEach(function (element) {
-            highlightMatchesInElement(element, regex);
+        keys.forEach(function (term) {
+            var regex = new RegExp(term, 'gi'); // global, case insensitive
+            var elementsToSearch = document.querySelectorAll('.paper'); // find within the .paper elements
+            elementsToSearch.forEach(function (element) {
+                highlightMatchesInElement(element, regex);
+            });
         });
     }
 }
+
 
 function highlightMatchesInElement(element, regex) {
     traverseNodes(element, function (node) {

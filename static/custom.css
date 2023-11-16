@@ -110,6 +110,23 @@ code {
     color: var(--c-hover);
 }
 
+.available-searches {
+    margin-bottom: 20px;
+}
+
+.open-folder {
+    background-color: transparent;
+    color: var(--c-primary);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+}
+
+.active, .open-folder:hover {
+    color: var(--c-hover);
+}
+
 .collapsible {
     background-color: transparent;
     color: var(--c-primary);

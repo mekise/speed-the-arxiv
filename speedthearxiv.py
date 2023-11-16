@@ -1,7 +1,9 @@
 import sys
 import os
+import platform
+import subprocess
 import yaml
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
 import feedparser
 import re
@@ -120,6 +122,25 @@ def process_entry(entry, past_days, run_scirate):
     else:
         return None
 
+@app.route('/open_folder', methods=['POST'])
+def open_folder():
+    try:
+        folder_path = './search'
+        command = None
+        if platform.system() == 'Linux':
+            command = ['xdg-open', folder_path]
+        elif platform.system() == 'Darwin':
+            command = ['open', folder_path]
+        elif platform.system() == 'Windows':
+            command = ['explorer', folder_path]
+        if command:
+            subprocess.Popen(command)
+            return jsonify({"message": "Folder opened successfully!"})
+        else:
+            return jsonify({"error": "Unsupported operating system"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
 # if __name__ == "__main__":
 #     app.run(debug=True)
 

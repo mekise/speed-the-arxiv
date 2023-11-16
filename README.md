@@ -16,10 +16,10 @@ I thought about using ML (I even started the relative branch) to predict what yo
 <ul>
     <li><s>Collapsible overview of .yaml parameters to the landing page.</s></li>
     <li><s>Keywords/keyauthors highlighting in HTML, for literal search.</s></li>
-    <li><s>Last-modified search file on top of index page</s></li>
-    <li><s>Add folder link to quickly access search files</s></li>
+    <li><s>Last-modified search file on top of index page.</s></li>
+    <li><s>Add folder link to quickly access search files.</s></li>
     <li>Collapsible stats to the search page (keys count etc.).</li>
-    <li>Fix occasional events of primary-category/category mishandling (see https://arxiv.org/abs/2307.06627 primary-category and category)</li>
+    <li>Fix occasional events of primary-category/category mishandling (see primary-category and category of example paper https://arxiv.org/abs/2307.06627).</li>
 </ul>
 
 <h3>How to use it</h3>

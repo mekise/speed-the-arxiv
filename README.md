@@ -9,6 +9,9 @@
 
 <p>⚠️ Fetching the Scirates slows down the app quite a bit. Unfortunately, no API is available for this and I had to fetch it "manually".</p>
 
+<h3>Try speed-the-arxiv</h3>
+<p>At this link, you can try speed-the-arxiv with limited functionality -> https://mekise.pythonanywhere.com/</p>
+
 <h3>A note on "learned" data</h3>
 I thought about using ML (I even started the relative branch) to predict what you might be interested in, but I chose to drop the ball. The reason is simple, I want speed-the-arxiv to return a broader spectrum of results, including some exotic catches. Reading exclusively ad-hoc papers based on your past preferences does not incentivate creativity or change, keys in research. On the other hand, I want you to find something relevant to your work, without losing focus. That is why the search criteria can distill the vastest of the fields. There you have it, choose your set of parameters for your search, click the button, and start exploring.
 

@@ -114,7 +114,7 @@ code {
     margin-bottom: 20px;
 }
 
-.open-folder {
+.icons {
     background-color: transparent;
     color: var(--c-primary);
     cursor: pointer;
@@ -217,4 +217,32 @@ code {
 
 .highlight {
     background-color: var(--c-highlight);
+}
+
+input[type=text] {
+    width: 200pt;
+    padding: 2px 2px;
+    margin: 2px 2px;
+    box-sizing: border-box;
+    border: none;
+    border-bottom: 1px solid var(--c-highlight);
+    color: var(--c-primary);
+    background-color: var(--c-background);
+}
+
+.button {
+    background-color: var(--c-background);
+    border: none;
+    color: var(--c-primary);
+    padding: 2px 2px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin: 2px 2px;
+    transition-duration: 0.3s;
+    cursor: pointer;
+}
+
+.button:hover {
+    color: var(--c-hover);
 }

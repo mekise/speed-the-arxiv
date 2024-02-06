@@ -5,7 +5,7 @@
     In the folder <code>search/</code>, you can have as many <code>.yaml</code> files as you want. You can choose what to search for on the landing page of <code>speedthearxiv.py</code>.
     The script uses Flask to query the Arxiv API and it shows the results in a clean HTML page. It includes collapsible abstracts and links to the articles.
     If needed, it checks and associates the Scirates to each article. Javascript is behind for some dynamicity.
-    Ajax takes care of making the search buttons and Flask talk.</p>
+    Ajax takes care of making the search buttons and Flask talk. As the latest addition, you can search bibtex entries using Crossref.</p>
 
 <p>⚠️ Fetching the Scirates slows down the app quite a bit. Unfortunately, no API is available for this and I had to fetch it "manually".</p>
 
@@ -21,6 +21,7 @@ I thought about using ML (I even started the relative branch) to predict what yo
     <li><s>Keywords/keyauthors highlighting in HTML, for literal search.</s></li>
     <li><s>Last-modified search file on top of the index page.</s></li>
     <li><s>Add folder link to quickly access search files.</s></li>
+    <li><s>Add Crossref search for bibtex entries</s></li>
     <li>Add MathJax support</li>
     <li>Collapsible stats to the search page (keys count etc.).</li>
     <li>Fix occasional events of primary-category/category mishandling (see primary-category and category of example paper https://arxiv.org/abs/2307.06627).</li>
@@ -36,7 +37,7 @@ I thought about using ML (I even started the relative branch) to predict what yo
 <h3>Dependencies</h3>
 <p>You will need some packages. To have everything you need, run in the terminal:</p>
 <pre><code">
-    pip install flask waitress datetime feedparser requests pyyaml
+    pip install flask waitress datetime feedparser requests pyyaml habanero
 </code></pre>
 <h3>What it looks like</h3>
 <img src="https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv.png?raw=true">

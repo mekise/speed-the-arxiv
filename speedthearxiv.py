@@ -38,7 +38,6 @@ def doi():
     if request.method == "POST":
         search_query = request.form['search_query']
         bibtex = cn.content_negotiation(ids = search_query, format = "bibentry")
-        print(bibtex)
         bibtex = format_bibtex_string(bibtex)
         return render_template('index.html', search_list=search_list, bibtex=bibtex)
 

@@ -3,7 +3,7 @@
 {% block content %}
 <div class="topmargin">
     <h4>Search Crossref</h4>
-    <p>Visit <a href="https://search.crossref.org/">https://search.crossref.org/</a> if you find any issue with the entry.</p>
+    <p>Visit <a href="https://search.crossref.org/" target="_blank">https://search.crossref.org/</a> if you find any issue with the entry.</p>
     <form action="{{ url_for('doi') }}" method="post">
         <label for="search_query">Enter a DOI:</label>
         <input type="text" id="search_query" name="search_query" required>

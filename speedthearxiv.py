@@ -9,6 +9,8 @@ import feedparser
 import re
 import webbrowser
 import datetime as dt
+import habanero
+from habanero import cn
 
 app_port = 8080
 app = Flask(__name__)
@@ -25,6 +27,20 @@ def index():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+@app.route("/doi", methods=['POST'])
+def doi():
+    searches = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
+    searches.sort(key=lambda x: os.path.getmtime('./search/'+x+'.yaml'), reverse=True)
+    search_list = []
+    for search in searches:
+        search_list.append(read_config(search))
+    if request.method == "POST":
+        search_query = request.form['search_query']
+        bibtex = cn.content_negotiation(ids = search_query, format = "bibentry")
+        print(bibtex)
+        bibtex = format_bibtex_string(bibtex)
+        return render_template('index.html', search_list=search_list, bibtex=bibtex)
 
 @app.route("/search", methods=['POST'])
 def search():
@@ -121,6 +137,15 @@ def process_entry(entry, past_days, run_scirate):
         }
     else:
         return None
+    
+def format_bibtex_string(input_string):
+    formatted_string = input_string.replace(' @', '@').replace(', title={', ',\n\ttitle={').replace('}, ', '},\n\t').replace('} }', '}\n}')
+    idx = formatted_string.find('month=')
+    if idx != -1 and formatted_string[idx+9]==',':
+        formatted_string = formatted_string[:idx+10] + '\n\t' + formatted_string[idx+11:]
+    elif idx != -1:
+        formatted_string = formatted_string[:idx+10] + '\n' + formatted_string[idx+10:]
+    return formatted_string
 
 @app.route('/open_folder', methods=['POST'])
 def open_folder():

@@ -220,7 +220,7 @@ code {
 }
 
 input[type=text] {
-    width: 200pt;
+    width: 300pt;
     padding: 2px 2px;
     margin: 2px 2px;
     box-sizing: border-box;

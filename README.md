@@ -7,13 +7,8 @@
     If needed, it checks and associates the Scirates to each article. Javascript is behind for some dynamicity.
     Ajax takes care of making the search buttons and Flask talk. As the latest addition, you can search bibtex entries using Crossref.</p>
 
-<p>⚠️ Fetching the Scirates slows down the app quite a bit. Unfortunately, no API is available for this and I had to fetch it "manually".</p>
-
 <h3>Try speed-the-arxiv</h3>
 <p>At this link, you can try speed-the-arxiv with (very) limited functionality -> https://mekise.pythonanywhere.com/</p>
-
-<h3>A note on "learned" data</h3>
-I thought about using ML (I even started the relative branch) to predict what you might be interested in, but I chose to drop the ball. The reason is simple, I want speed-the-arxiv to return a broader spectrum of results, including some exotic catches. Reading exclusively ad-hoc papers based on your past preferences does not incentivize creativity or change, keys in research. On the other hand, I want you to find something relevant to your work, without losing focus. That is why the search criteria can distill the vastest of the fields. There you have it, choose your set of parameters for your search, click the button, and start exploring.
 
 <h3>To-do</h3>
 <ul>
@@ -22,6 +17,7 @@ I thought about using ML (I even started the relative branch) to predict what yo
     <li><s>Last-modified search file on top of the index page.</s></li>
     <li><s>Add folder link to quickly access search files.</s></li>
     <li><s>Add Crossref search for bibtex entries</s></li>
+    <li><s>Replace regex parsing with bs4</s></li>
     <li>Add MathJax support</li>
     <li>Collapsible stats to the search page (keys count etc.).</li>
     <li>Fix occasional events of primary-category/category mishandling (see primary-category and category of example paper https://arxiv.org/abs/2307.06627).</li>

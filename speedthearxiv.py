@@ -1,16 +1,16 @@
-import sys
 import os
 import platform
 import subprocess
 import yaml
-from flask import Flask, render_template, request, jsonify
 import requests
 import feedparser
-import re
+import asyncio
+import aiohttp
 import webbrowser
 import datetime as dt
-import habanero
+from flask import Flask, render_template, request, jsonify
 from habanero import cn
+from bs4 import BeautifulSoup
 
 app_port = 8080
 app = Flask(__name__)
@@ -71,9 +71,11 @@ def search():
     response = requests.get(url)
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
+        arxiv_ids = [entry.id.split('/')[-1] for entry in feeds.entries]
+        scirates = asyncio.run(get_scirates_async(arxiv_ids))
         papers = []
-        for entry in feeds.entries:
-            paper = process_entry(entry, config['past_days'], config['run_scirate'])
+        for i, entry in enumerate(feeds.entries):
+            paper = process_entry(entry, config['past_days'], scirates[i] if config['run_scirate'] else 0)
             if paper:
                 papers.append(paper)
         papers.sort(key=lambda x:tuple([x[ele] for ele in config['sortby']]), reverse=config['sortorder_rev'])
@@ -103,39 +105,36 @@ def read_config(name):
         "keywords": config['keys']['keywords']
     }
 
-def parse_scirate(entry):
-    scirate = 0
-    response = requests.get("https://scirate.com/arxiv/"+entry.id.partition("http://arxiv.org/abs/")[2])
-    if response.status_code == 200:
-        string_to_parse = feedparser.parse(response.text)['feed']['summary']
-        scirate = re.findall('<button class="btn btn-default count">\\s*(\\d+)\\s*<\\/button', string_to_parse)[0]
-    else:
-        scirate = -1
-    return int(scirate)
-
-def process_entry(entry, past_days, run_scirate):
-    checkdate = [ele for ele in entry.updated[0:10].split('-')]
-    if dt.date.today() - dt.date(int(checkdate[0]), int(checkdate[1]), int(checkdate[2])) <= dt.timedelta(days=past_days):
-        title = entry.title
-        authors = ", ".join(author.name for author in entry.authors)
-        summary = entry.summary
-        date = entry.updated[0:10]
-        category = ", ".join(ele for ele in entry.category.split('.'))
-        pdf_url = entry.link
-        scirate = 0
-        if run_scirate:
-            scirate = parse_scirate(entry)
+async def fetch_scirate(session, arxiv_id):
+    url = f"https://scirate.com/arxiv/{arxiv_id}"
+    try:
+        async with session.get(url) as response:
+            html = await response.text()
+            soup = BeautifulSoup(html, "html.parser")
+            btn = soup.find("button", {"class": "btn btn-default count"})
+            return int(btn.text.strip()) if btn else 0
+    except:
+        return -1
+    
+async def get_scirates_async(arxiv_ids):
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_scirate(session, arxiv_id) for arxiv_id in arxiv_ids]
+        return await asyncio.gather(*tasks)
+    
+def process_entry(entry, past_days, scirate):
+    checkdate = entry.updated[0:10]
+    entry_date = dt.date.fromisoformat(checkdate)
+    if dt.date.today() - entry_date <= dt.timedelta(days=past_days):
         return {
-            "title": title,
-            "authors": authors,
-            "summary": summary,
-            "date": date,
-            "category": category,
-            "pdf_url": pdf_url,
+            "title": entry.title,
+            "authors": ", ".join(author.name for author in entry.authors),
+            "summary": entry.summary,
+            "date": checkdate,
+            "category": ", ".join(entry.category.split('.')),
+            "pdf_url": entry.link,
             "scirate": scirate
         }
-    else:
-        return None
+    return None
     
 def format_bibtex_string(input_string):
     formatted_string = input_string.replace(' @', '@').replace(', title={', ',\n\ttitle={').replace('}, ', '},\n\t').replace('} }', '}\n}')

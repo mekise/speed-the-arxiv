@@ -84,7 +84,8 @@ def search():
     config = read_config(data['search'])
     cached = load_cache(config['name'])
     if cached:
-        return render_search(config, cached['papers'], cached['fetched_at'])
+        config_changed = cached.get('config') is not None and cached['config'] != _search_params(config)
+        return render_search(config, cached['papers'], cached['fetched_at'], config_changed=config_changed)
     return do_fetch_and_render(config)
 
 @app.route("/refresh", methods=['POST'])
@@ -150,20 +151,28 @@ def do_fetch_and_render(config):
         papers = [paper for _, paper in filtered]
         papers.sort(key=lambda x:tuple([x[ele] for ele in config['sortby']]), reverse=config['sortorder_rev'])
         fetched_at = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        save_cache(config['name'], papers, fetched_at)
+        save_cache(config['name'], papers, fetched_at, config)
         return render_search(config, papers, fetched_at)
     else:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": f"arXiv API returned status {response.status_code}. Try again later or reduce query complexity."}), 502
         return render_search(config, [], None)
 
-def render_search(config, papers, fetched_at):
+def render_search(config, papers, fetched_at, config_changed=False):
+    cache_stale = False
+    if fetched_at:
+        try:
+            fetched = dt.datetime.strptime(fetched_at, '%Y-%m-%d %H:%M:%S')
+            cache_stale = (dt.datetime.now() - fetched).total_seconds() > 86400
+        except (ValueError, TypeError):
+            pass
     template_args = dict(papers=papers,
         keyauthors=[keyauthor for keyauthor in config["keyauthors"]],
         keywords=[keyword for keyword in config["keywords"]],
         sections=[section for section in config["sections"]],
         search_name=config['name'], run_scirate=config['run_scirate'],
-        fetched_at=fetched_at)
+        fetched_at=fetched_at, cache_stale=cache_stale,
+        config_changed=config_changed)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template("search_content.html", **template_args)
     return render_template("search.html", **template_args)
@@ -175,10 +184,21 @@ def load_cache(search_name):
             return json.load(f)
     return None
 
-def save_cache(search_name, papers, fetched_at):
+_SEARCH_CONFIG_KEYS = [
+    'sections', 'keywords', 'keyauthors',
+    'and_or_sections', 'and_or_keyauthors', 'and_or', 'and_or_keywords',
+    'max_results', 'past_days', 'literal', 'run_scirate',
+    'arxiv_sortby', 'arxiv_sortorder',
+]
+
+def _search_params(config):
+    return {k: config[k] for k in _SEARCH_CONFIG_KEYS}
+
+def save_cache(search_name, papers, fetched_at, config):
     cache_path = os.path.join(CACHE_DIR, search_name + '.json')
     with open(cache_path, 'w') as f:
-        json.dump({'papers': papers, 'fetched_at': fetched_at}, f)
+        json.dump({'papers': papers, 'fetched_at': fetched_at,
+                   'config': _search_params(config)}, f)
 
 def read_config(name):
     with open('search/'+str(name)+'.yaml', 'r') as file:

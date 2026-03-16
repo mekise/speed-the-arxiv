@@ -15,6 +15,22 @@
     --bs-border-color-translucent: var(--c-border);
 }
 
+[data-theme="light"] {
+    --c-primary: #222;
+    --c-secondary: #333;
+    --c-nav: #5a3e2b;
+    --c-code: #333;
+    --c-background: #f5f5f0;
+    --c-background_card: #e8e8e3;
+    --c-link: #444;
+    --c-hover: #8b5e3c;
+    --c-active: #4a8035;
+    --c-visited: #6a5a7a;
+    --c-border: #ccc;
+    --c-highlight: #c8a2d8;
+    --bs-border-color-translucent: var(--c-border);
+}
+
 a:link {
     color: var(--c-link);
     background-color: transparent;
@@ -58,6 +74,10 @@ code {
     color: var(--c-code);
 }
 
+mjx-container:not([display="true"]) {
+    display: inline !important;
+}
+
 .speedthearxiv {
     color: var(--c-nav);
     font-size: 3.2rem;
@@ -75,7 +95,7 @@ code {
 }
 
 .topmargin-papers {
-    margin-top: 160px;
+    margin-top: 200px;
 }
 
 .paper {
@@ -219,6 +239,81 @@ code {
     background-color: var(--c-highlight);
 }
 
+.pagination-controls {
+    text-align: center;
+    margin: 20px 0 40px 0;
+}
+
+.page-btn {
+    background-color: transparent;
+    color: var(--c-primary);
+    border: 1px solid var(--c-border);
+    border-radius: 0.3rem;
+    padding: 4px 10px;
+    margin: 0 2px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.page-btn:hover {
+    color: var(--c-hover);
+    border-color: var(--c-hover);
+}
+
+.page-btn.page-active {
+    background-color: var(--c-highlight);
+    border-color: var(--c-highlight);
+    color: var(--c-primary);
+}
+
+.nav-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.stats-dropdown-menu {
+    background-color: var(--c-background_card);
+    border: 1px solid var(--c-border);
+    padding: 12px 16px;
+    min-width: 300px;
+}
+
+.stats-dropdown-menu .list-group {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.stats-dropdown-menu .list-group li {
+    padding: 2px 0;
+    font-size: 0.85rem;
+    color: var(--c-primary);
+}
+
+.stats-dropdown-menu .dropdown-item:hover {
+    background-color: var(--c-highlight);
+    color: var(--c-primary);
+}
+
+.filter-input {
+    width: 250pt;
+    padding: 2px 6px;
+    margin-top: 0;
+    box-sizing: border-box;
+    border: none;
+    border-bottom: 1px solid var(--c-border);
+    color: var(--c-primary);
+    background-color: transparent;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.filter-input:focus {
+    border-bottom-color: var(--c-highlight);
+}
+
 input[type=text] {
     width: 300pt;
     padding: 2px 2px;
@@ -245,4 +340,97 @@ input[type=text] {
 
 .button:hover {
     color: var(--c-hover);
+}
+
+.create-new-btn {
+    border: 1px solid var(--c-highlight) !important;
+    padding: 4px 14px !important;
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
+}
+
+.create-new-btn:hover {
+    background-color: var(--c-highlight);
+    color: var(--c-code);
+}
+
+.config-edit-card {
+    background-color: var(--c-background_card);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+}
+
+.config-form-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px 12px;
+}
+
+.config-form-grid label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.config-input {
+    background-color: var(--c-background);
+    border: 1px solid var(--c-border);
+    border-radius: 3px;
+    color: var(--c-primary);
+    padding: 3px 6px;
+    font-size: 0.85rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.config-input:focus {
+    border-color: var(--c-highlight);
+    outline: none;
+}
+
+.config-form-grid label:has(.config-input-wide) {
+    grid-column: 1 / -1;
+}
+
+.search-config-block {
+    margin-bottom: 8px;
+}
+
+.crossref-box {
+    background-color: transparent;
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 16px 20px;
+}
+
+.spinner-inline {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--c-border);
+    border-top-color: var(--c-nav);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#doi-search-btn {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    text-decoration: underline;
+}
+
+.alert-msg {
+    color: #e8a87c;
+    font-size: 0.9rem;
+    padding: 6px 0;
 }

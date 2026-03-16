@@ -5,6 +5,12 @@
             {% if fetched_at %}
             <span style="font-size: 0.8rem; opacity: 0.6;">fetched: {{ fetched_at }}</span>
             {% endif %}
+            {% if cache_stale %}
+            <span class="cache-stale-warning">&#9888; cached results are more than 24h old &mdash; consider refreshing</span>
+            {% endif %}
+            {% if config_changed %}
+            <span class="cache-stale-warning">&#9888; search config has changed since last fetch &mdash; consider refreshing</span>
+            {% endif %}
             <button class="tools tools-box" id="refresh-btn" data-search="{{ search_name }}">refresh</button>
             <div class="dropdown d-inline-block" style="margin-left: 8px;">
                 <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">sort</button>

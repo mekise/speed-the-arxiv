@@ -207,6 +207,12 @@ mjx-container:not([display="true"]) {
     line-height: 1.5;
 }
 
+.cache-stale-warning {
+    font-size: 0.8rem;
+    color: #e8a020;
+    margin-left: 10px;
+}
+
 .tools {
     background-color: transparent;
     color: var(--c-primary);

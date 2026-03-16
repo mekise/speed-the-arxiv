@@ -16,10 +16,22 @@
         <script type="text/javascript" src="{{ url_for('static', filename='search.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static', filename='openfolder.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static', filename='copybibtex.js') }}"></script>
-        <script type="text/javascript" src="{{ url_for('static', filename='highlight.js') }}" defer></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='highlight.js') }}"></script>
+        <script>
+            window.MathJax = {
+                tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+            };
+        </script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </head>
 
     <body>
+        <script>
+            (function() {
+                var t = localStorage.getItem('theme');
+                if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+            })();
+        </script>
         <div class="container">
             <nav class="navbar fixed-top">
                 <div class="container justify-content-center">
@@ -27,11 +39,38 @@
                         <a href="/about"; style="color:inherit; font-family: 'Roboto', sans-serif; font-size: 1rem;">about</a>
                         <a href="/"; style="color: inherit;">speed-the-arxiv</a>
                         <a href="https://github.com/mekise"; target="_blank"; style="color: inherit; font-family: 'Roboto', sans-serif; font-size: 1rem;">by me</a>
+                        <button id="theme-toggle" onclick="toggleTheme()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;vertical-align:middle;margin-left:8px;color:inherit;" title="Toggle theme">
+                            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="display:none;">
+                                <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/>
+                            </svg>
+                            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="display:none;">
+                                <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M3.757 4.464a.5.5 0 0 1-.707 0L1.636 3.05a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707"/>
+                            </svg>
+                        </button>
                     </h1>
                 </div>
             </nav>
         </div>
-        <div class="container">
+        <script>
+            function toggleTheme() {
+                var html = document.documentElement;
+                if (html.getAttribute('data-theme') === 'light') {
+                    html.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    html.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                }
+                updateThemeIcon();
+            }
+            function updateThemeIcon() {
+                var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                document.getElementById('theme-icon-moon').style.display = isLight ? 'inline' : 'none';
+                document.getElementById('theme-icon-sun').style.display = isLight ? 'none' : 'inline';
+            }
+            updateThemeIcon();
+        </script>
+        <div class="container" id="main-content">
             {% block content %}
             {% endblock %}
         </div>

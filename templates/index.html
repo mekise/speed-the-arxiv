@@ -2,63 +2,99 @@
 
 {% block content %}
 <div class="topmargin">
-    <h4>Search Crossref</h4>
-    <p>Visit <a href="https://search.crossref.org/" target="_blank">https://search.crossref.org/</a> if you find any issue with the entry.</p>
-    <form action="{{ url_for('doi') }}" method="post">
-        <label for="search_query">Enter a DOI:</label>
-        <input type="text" id="search_query" name="search_query" required>
-        <button type="submit" class="button">Search</button>
-        <button class="icons" title="Copy formatted bibtex entry" onclick="copyTextToClipboard()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
-                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
-                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
-            </svg>
-        </button>
-        {% if bibtex %}
-            <br>
-            <div class="card card-body"><pre id="textToCopy">{{ bibtex | safe }}</pre></div>
-        {% endif %}
-    </form>
+    <div class="crossref-box">
+        <h4>Search Crossref</h4>
+        <p>Visit <a href="https://search.crossref.org/" target="_blank">https://search.crossref.org/</a> if you find any issue with the entry.</p>
+        <form id="doi-form">
+            <label for="search_query">Enter a DOI or DOI URL:</label>
+            <input type="text" id="search_query" name="search_query" required placeholder="10.1234/... or https://doi.org/...">
+            <button type="submit" class="button" id="doi-search-btn">Search</button>
+            <button type="button" class="icons" id="crossref-copy-btn" title="Copy formatted bibtex entry" onclick="copyTextToClipboard()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                </svg>
+            </button>
+            <div id="doi-result"></div>
+        </form>
+    </div>
     <br>
     <h4>Search Arxiv</h4>
-    <p><strong>NOTE:</strong> the parsing/fetching time strongly depends on the search criteria. This can easily go from 1s to 60s.
-        If you selected <code>run_scirate: true</code> or have more than <code>max_results: 100</code>, be patient!</p>
-    <p class="available-searches"><button class="icons" title="Open search folder to customize .yaml files" onclick="openLocalFolder()">
+    <p>
+        <button class="icons" title="Open search folder" onclick="openLocalFolder()">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
                 <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z"/>
             </svg>
         </button>
-        Click this folder to customize the search criteria. Once done, save the files and reload the page by clicking on "speed-the-arxiv".
+        <button type="button" class="tools tools-box create-new-btn" id="new-config-btn">Create new search</button>
     </p>
+
+    <div id="new-config-form" style="display: none; margin-bottom: 20px;">
+        <div class="config-edit-card">
+            <label style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 6px;">Name <input type="text" class="config-input" id="new-cfg-name" placeholder="my-search" style="width: 250px;"></label>
+            <div class="config-form-grid">
+                <label>max_results <input type="text" class="config-input" id="new-cfg-max_results" value="100"></label>
+                <label>past_days <input type="text" class="config-input" id="new-cfg-past_days" value="30"></label>
+                <label>literal <select class="config-input" id="new-cfg-literal"><option value="true" selected>true</option><option value="false">false</option></select></label>
+                <label>run_scirate <select class="config-input" id="new-cfg-run_scirate"><option value="false" selected>false</option><option value="true">true</option></select></label>
+                <label>arxiv_sortby <select class="config-input" id="new-cfg-arxiv_sortby"><option value="submittedDate" selected>submittedDate</option><option value="relevance">relevance</option><option value="lastUpdatedDate">lastUpdatedDate</option></select></label>
+                <label>arxiv_sortorder <select class="config-input" id="new-cfg-arxiv_sortorder"><option value="descending" selected>descending</option><option value="ascending">ascending</option></select></label>
+                <label>sortby <input type="text" class="config-input" id="new-cfg-sortby" value="date, scirate" placeholder="date, scirate"></label>
+                <label>sortorder_rev <select class="config-input" id="new-cfg-sortorder_rev"><option value="true" selected>true</option><option value="false">false</option></select></label>
+                <label>and_or_sections <select class="config-input" id="new-cfg-and_or_sections"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+                <label>and_or_keyauthors <select class="config-input" id="new-cfg-and_or_keyauthors"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+                <label>and_or <select class="config-input" id="new-cfg-and_or"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+                <label>and_or_keywords <select class="config-input" id="new-cfg-and_or_keywords"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+                <label>sections <input type="text" class="config-input config-input-wide" id="new-cfg-sections" placeholder="quant-ph, cs.LG"></label>
+                <label>keyauthors <input type="text" class="config-input config-input-wide" id="new-cfg-keyauthors" placeholder="coles, babbush"></label>
+                <label>keywords <input type="text" class="config-input config-input-wide" id="new-cfg-keywords" placeholder="nisq, adiabatic"></label>
+            </div>
+            <div style="margin-top: 8px;">
+                <button type="button" class="tools tools-box" id="create-config-btn">create</button>
+                <button type="button" class="tools tools-box" onclick="document.getElementById('new-config-form').style.display='none'">cancel</button>
+            </div>
+        </div>
+    </div>
+
     {% for search_ele in search_list %}
+        <div class="search-config-block" data-config-name="{{ search_ele.name }}">
         <button class="search search-box" value="{{ search_ele.name }}">{{ search_ele.name }}</button>
-        <button id="btn-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+        {% if search_ele.cache_age %}
+        <span style="font-size: 0.75rem; opacity: 0.5; margin-left: 2px;">cached {{ search_ele.cache_age }}</span>
+        {% endif %}
+        <button class="collapsible cfg-toggle" type="button" aria-expanded="false" aria-controls="cfg-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#cfg-{{ loop.index }}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
                 <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
             </svg>
         </button>
-        <div id="summary-{{ loop.index }}" class="collapse">
-            <div class="card card-body">
-                <ul class="list-group">
-                    <li>max_results = {{ search_ele.max_results }}</li>
-                    <li>past_days = {{search_ele.past_days}}</li>
-                    <li>literal = {{search_ele.literal}}</li>
-                    <li>run_scirate = {{search_ele.run_scirate}}</li>
-                    <li>arxiv_sortby = {{search_ele.arxiv_sortby}}</li>
-                    <li>arxiv_sortorder = {{search_ele.arxiv_sortorder}}</li>
-                    <li>sortby = {{search_ele.sortby}}</li>
-                    <li>sortorder_rev = {{search_ele.sortorder_rev}}</li>
-                    <li>and_or_sections = {{search_ele.and_or_sections}}</li>
-                    <li>and_or_keyauthors = {{search_ele.and_or_keyauthors}}</li>
-                    <li>and_or = {{search_ele.and_or}}</li>
-                    <li>and_or_keywords = {{search_ele.and_or_keywords}}</li>
-                    <li>sections = {{search_ele.sections}}</li>
-                    <li>keyauthors = {{search_ele.keyauthors}}</li>
-                    <li>keywords = {{search_ele.keywords}}</li>
-                </ul>
+        <div id="cfg-{{ loop.index }}" class="collapse">
+            <div class="config-edit-card">
+                <div class="config-form-grid">
+                    <label>max_results <input type="text" class="config-input" data-field="max_results" value="{{ search_ele.max_results }}"></label>
+                    <label>past_days <input type="text" class="config-input" data-field="past_days" value="{{ search_ele.past_days }}"></label>
+                    <label>literal <select class="config-input" data-field="literal"><option value="true" {{ 'selected' if search_ele.literal }}>true</option><option value="false" {{ 'selected' if not search_ele.literal }}>false</option></select></label>
+                    <label>run_scirate <select class="config-input" data-field="run_scirate"><option value="false" {{ 'selected' if not search_ele.run_scirate }}>false</option><option value="true" {{ 'selected' if search_ele.run_scirate }}>true</option></select></label>
+                    <label>arxiv_sortby <select class="config-input" data-field="arxiv_sortby"><option value="submittedDate" {{ 'selected' if search_ele.arxiv_sortby == 'submittedDate' }}>submittedDate</option><option value="relevance" {{ 'selected' if search_ele.arxiv_sortby == 'relevance' }}>relevance</option><option value="lastUpdatedDate" {{ 'selected' if search_ele.arxiv_sortby == 'lastUpdatedDate' }}>lastUpdatedDate</option></select></label>
+                    <label>arxiv_sortorder <select class="config-input" data-field="arxiv_sortorder"><option value="descending" {{ 'selected' if search_ele.arxiv_sortorder == 'descending' }}>descending</option><option value="ascending" {{ 'selected' if search_ele.arxiv_sortorder == 'ascending' }}>ascending</option></select></label>
+                    <label>sortby <input type="text" class="config-input" data-field="sortby" value="{{ search_ele.sortby|join(', ') }}"></label>
+                    <label>sortorder_rev <select class="config-input" data-field="sortorder_rev"><option value="true" {{ 'selected' if search_ele.sortorder_rev }}>true</option><option value="false" {{ 'selected' if not search_ele.sortorder_rev }}>false</option></select></label>
+                    <label>and_or_sections <select class="config-input" data-field="and_or_sections"><option value="+OR+" {{ 'selected' if search_ele.and_or_sections == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_sections == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_sections == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                    <label>and_or_keyauthors <select class="config-input" data-field="and_or_keyauthors"><option value="+OR+" {{ 'selected' if search_ele.and_or_keyauthors == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keyauthors == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keyauthors == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                    <label>and_or <select class="config-input" data-field="and_or"><option value="+OR+" {{ 'selected' if search_ele.and_or == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                    <label>and_or_keywords <select class="config-input" data-field="and_or_keywords"><option value="+OR+" {{ 'selected' if search_ele.and_or_keywords == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keywords == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keywords == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                    <label>sections <input type="text" class="config-input config-input-wide" data-field="sections" value="{{ search_ele.sections|join(', ') }}"></label>
+                    <label>keyauthors <input type="text" class="config-input config-input-wide" data-field="keyauthors" value="{{ search_ele.keyauthors|join(', ') }}"></label>
+                    <label>keywords <input type="text" class="config-input config-input-wide" data-field="keywords" value="{{ search_ele.keywords|join(', ') }}"></label>
+                </div>
+                <div style="margin-top: 8px;">
+                    <button class="tools tools-box save-config-btn">save</button>
+                    <button class="tools tools-box reload-config-btn">reload</button>
+                    <button class="tools tools-box duplicate-config-btn">duplicate</button>
+                    <button class="tools tools-box delete-config-btn">delete</button>
+                </div>
             </div>
         </div>
-        <br>
+        </div>
     {% endfor %}
 </div>
 {% endblock %}

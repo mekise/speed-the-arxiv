@@ -1,39 +1,79 @@
-<h1>speed-the-arxiv</h1>
-<p> It is common practice to read the Arxiv periodically, checking the same sections, the same keywords, and the same authors. Speed-the-arxiv tries to speed these searches up.
-    Together with a little HTML, it checks the latest on the Arxiv based on sections, keywords, and authors of choice. 
-    These keys are stored in <code>.yaml</code> files and are reused every time you run the script. Additional parameters in the file let you personalize the search criteria. 
-    In the folder <code>search/</code>, you can have as many <code>.yaml</code> files as you want. You can choose what to search for on the landing page of <code>speedthearxiv.py</code>.
-    The script uses Flask to query the Arxiv API and it shows the results in a clean HTML page. It includes collapsible abstracts and links to the articles.
-    If needed, it checks and associates the Scirates to each article. Javascript is behind for some dynamicity.
-    Ajax takes care of making the search buttons and Flask talk. As the latest addition, you can search bibtex entries using Crossref.</p>
+# speed-the-arxiv
 
-<h3>Try speed-the-arxiv</h3>
-<p>At this link, you can try speed-the-arxiv with (very) limited functionality -> https://mekise.pythonanywhere.com/</p>
+You know the drill. Wake up, coffee, arXiv. Same sections, same keywords, same authors — every single day. Speed-the-arxiv exists so you can do that in seconds instead of minutes, and maybe enjoy the coffee a bit more.
 
-<h3>To-do</h3>
-<ul>
-    <li><s>Collapsible overview of .yaml parameters to the landing page.</s></li>
-    <li><s>Keywords/keyauthors highlighting in HTML, for literal search.</s></li>
-    <li><s>Last-modified search file on top of the index page.</s></li>
-    <li><s>Add folder link to quickly access search files.</s></li>
-    <li><s>Add Crossref search for bibtex entries</s></li>
-    <li><s>Replace regex parsing with bs4</s></li>
-    <li>Add MathJax support</li>
-    <li>Collapsible stats to the search page (keys count etc.).</li>
-    <li>Fix occasional events of primary-category/category mishandling (see primary-category and category of example paper https://arxiv.org/abs/2307.06627).</li>
-</ul>
+Define your searches in `.yaml` configs (or create them right from the UI), hit a button, and get a clean page of results with collapsible abstracts, LaTeX rendering, SciRate scores, and one-click BibTeX — no copy-pasting DOIs into twelve different tabs.
 
-<h3>How to use it</h3>
-<ul>
-    <li>Clone the repo or download</li>
-    <li>Change the keys/parameters in the <code>search/config.yaml</code> file. You can create multiple <code>.yaml</code> files to have different searches ready.</li>
-    <li>Run <code>python speedthearxiv.py</code> in the terminal.</li>
-    <li>Select the search you want from the list.</li>
-</ul>
-<h3>Dependencies</h3>
-<p>You will need some packages. To have everything you need, run in the terminal:</p>
-<pre><code">
-    pip install flask waitress datetime feedparser requests pyyaml habanero
-</code></pre>
-<h3>What it looks like</h3>
-<img src="https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv.png?raw=true">
+Try it with limited functionality: https://mekise.pythonanywhere.com/
+
+## Setup
+
+Clone the repository:
+
+```
+git clone https://github.com/mekise/speed-the-arxiv.git
+cd speed-the-arxiv
+```
+
+Install dependencies using `setup.py`:
+
+```
+pip install .
+```
+
+Or install them manually:
+
+```
+pip install flask requests feedparser pyyaml habanero waitress beautifulsoup4 aiohttp
+```
+
+## Usage
+
+1. Edit `search/config.yaml` to set your sections, keywords, and authors. You can also create, edit, duplicate, and delete configs directly from the UI.
+2. Run the app:
+   ```
+   python speedthearxiv.py
+   ```
+3. A browser window opens at `http://localhost:8080/`. Select a search from the landing page — cache age is displayed next to each search so you know how fresh the results are.
+4. Results are loaded via AJAX with an inline spinner on the clicked button. Use the highlight buttons, sort controls, text filter, and pagination to navigate results.
+
+## Search configuration
+
+Each `.yaml` file in `search/` supports the following parameters:
+
+| Parameter | Description |
+| --- | --- |
+| `max_results` | Maximum number of results to fetch |
+| `past_days` | Number of days to look back from today |
+| `literal` | Literal (exact phrase) keyword search |
+| `run_scirate` | Fetch SciRate scores for each paper |
+| `arxiv_sortby` | arXiv sort field (`submittedDate`, `relevance`, `lastUpdatedDate`) |
+| `arxiv_sortorder` | arXiv sort order (`descending`, `ascending`) |
+| `sortby` | Local sort keys (e.g. `['date', 'scirate']`) |
+| `sortorder_rev` | `true` for descending, `false` for ascending |
+| `and_or_*` | Logical connectors between keys (`+OR+`, `+AND+`, `+ANDNOT+`) |
+| `keys.sections` | arXiv category list (e.g. `[quant-ph, cs.LG]`) |
+| `keys.keyauthors` | Author list |
+| `keys.keywords` | Keyword list |
+
+See `search/config.yaml` for a complete example.
+
+## Features
+
+- **Configurable searches** — sections, keywords, authors, logical operators, date ranges, all in tidy `.yaml` files you can create, edit, duplicate, and delete from the browser.
+- **Dark & light theme** — because not everyone wants to stare into the void (or into the sun).
+- **Sort, filter, paginate** — sort by date, SciRate score, or title. Filter results in real time. 25 papers per page so your browser doesn't melt.
+- **SciRate scores** — fetched asynchronously with concurrency limits and timeouts, so you get scores without hammering the internet.
+- **BibTeX on demand** — auto-generated for every paper, copy to clipboard with one click. Need a specific DOI? The Crossref lookup on the landing page has you covered.
+- **Keyword & author highlighting** — toggle-able, so the important bits jump out at you.
+- **MathJax** — LaTeX in titles and abstracts rendered properly, as nature intended.
+- **Caching** — results are cached locally with a visible age indicator so you know exactly how stale your data is.
+- **Robust error handling** — timeouts, API failures, and unreachable endpoints all get friendly messages instead of blank screens.
+
+## Why no ML?
+
+A recommendation engine narrows your reading to papers that look like what you already read. That's great for efficiency, terrible for serendipity. Speed-the-arxiv casts a wider net on purpose — you set the parameters, the search distills the field, and every now and then something unexpected catches your eye. That's the good stuff.
+
+## Screenshot
+
+![speed-the-arxiv](https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv.png?raw=true)

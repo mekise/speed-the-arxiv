@@ -1,0 +1,101 @@
+<div class="container" id="search-nav">
+    <nav class="fixed-top topmargin-nav align-middle">
+        <div class="container">
+            search: {{ search_name }}.yaml &nbsp;&nbsp; - &nbsp;&nbsp;
+            {% if fetched_at %}
+            <span style="font-size: 0.8rem; opacity: 0.6;">fetched: {{ fetched_at }}</span>
+            {% endif %}
+            <button class="tools tools-box" id="refresh-btn" data-search="{{ search_name }}">refresh</button>
+            <div class="dropdown d-inline-block" style="margin-left: 8px;">
+                <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">sort</button>
+                <ul class="dropdown-menu stats-dropdown-menu" style="min-width: 150px; padding: 6px 0;">
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="date" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Date (newest)</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="date" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Date (oldest)</a></li>
+                    {% if run_scirate %}
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="scirate" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Scirate (highest)</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="scirate" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Scirate (lowest)</a></li>
+                    {% endif %}
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="title" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Title (A-Z)</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="title" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Title (Z-A)</a></li>
+                </ul>
+            </div>
+            <button class="tools tools-box" onclick="toggleAllAbstracts()">expand all abstracts</button>
+            <button class="tools tools-box" onclick="highlight({{ keywords }})">highlight keywords</button>
+            <button class="tools tools-box" onclick="highlight({{ keyauthors }})">highlight keyauthors</button>
+            <br>
+            <div class="nav-stats-row">
+                <div class="dropdown d-inline-block">
+                    <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Stats ({{ papers|length }} papers)
+                    </button>
+                    <div class="dropdown-menu stats-dropdown-menu">
+                        <ul class="list-group">
+                            <li><strong>Total papers:</strong> {{ papers|length }}</li>
+                            {% if sections %}
+                            <li><strong>Sections ({{ sections|length }}):</strong> {{ sections|join(', ') }}</li>
+                            {% endif %}
+                            {% if keywords %}
+                            <li><strong>Keywords ({{ keywords|length }}):</strong> {{ keywords|join(', ') }}</li>
+                            {% endif %}
+                            {% if keyauthors %}
+                            <li><strong>Key authors ({{ keyauthors|length }}):</strong> {{ keyauthors|join(', ') }}</li>
+                            {% endif %}
+                            {% if papers %}
+                            <li><strong>Date range:</strong> {{ papers[-1].date }} to {{ papers[0].date }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                <input type="text" id="filter-input" class="filter-input" placeholder="filter papers..." autocomplete="off">
+                <span id="filter-count" style="font-size: 0.8rem; opacity: 0.6; margin-left: 8px;"></span>
+            </div>
+        </div>
+    </nav>
+</div>
+
+<div class="topmargin-papers">
+    {% for paper in papers %}
+    <div class="paper-wrapper" data-date="{{ paper.date }}" data-scirate="{{ paper.scirate }}" data-index="{{ loop.index0 }}">
+    <div class="paper">
+        <h3 class="title"><a href="{{ paper.abs_url }}" target="_blank">{{ paper.title }}</a></h3>
+        <p class="authors">{{ paper.authors }}</p>
+        <p class="authors">{{ paper.date }} - {{ paper.category }}
+            <a class="icons" href="{{ paper.pdf_url }}" target="_blank" title="Open PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16">
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                    <path d="M4.603 14.087a.8.8 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.7 7.7 0 0 1 1.482-.645 20 20 0 0 0 1.062-2.227 7.3 7.3 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a11 11 0 0 0 .98 1.686 5.8 5.8 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.86.86 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a6.1 6.1 0 0 1-.911-.95 11.7 11.7 0 0 0-1.997.406 11.3 11.3 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.8.8 0 0 1-.58.029m1.379-1.901q-.25.115-.459.238c-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.3.3 0 0 0 .152-.053c.18-.12.4-.36.639-.689zm-1.8-.515-.015.002a.2.2 0 0 0 .015-.002m4.834-4.56c.021-.199.03-.38.024-.541a1.6 1.6 0 0 0-.044-.29 .3.3 0 0 0-.107-.157.15.15 0 0 0-.12-.02c-.137.055-.185.195-.218.363-.04.2-.035.432.007.692.03.19.074.39.13.593z"/>
+                </svg>
+            </a>
+            <button class="icons copy-bibtex-btn" title="Copy BibTeX" data-bibtex="{{ paper.bibtex|e }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                </svg>
+            </button>
+        </p>
+        <p>
+        {% if run_scirate %}
+            <button id="btn-scirate-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+                Abstract | Scirate: {{ paper.scirate }}
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        {% else %}
+            <button id="btn-{{ loop.index }}" class="collapsible" type="button" aria-expanded="false" aria-controls="summary-{{ loop.index }}" data-bs-toggle="collapse" data-bs-target="#summary-{{ loop.index }}">
+                Abstract
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        {% endif %}
+        </p>
+        <div id="summary-{{ loop.index }}" class="collapse">
+            <div class="card card-body"><p>{{ paper.summary }}</p></div>
+        </div>
+    </div>
+    <hr style="background-color:gray; margin-bottom: 30px;">
+    </div>
+    {% endfor %}
+    <div id="pagination-controls" class="pagination-controls"></div>
+</div>

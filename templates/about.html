@@ -3,36 +3,47 @@
 {% block content %}
 <div class="topmargin">
     <div class="about">
-        <h4>About</h4>
+        <h4>What is this?</h4>
         <p>
-            It is common practice to read the Arxiv periodically, checking the same sections, the same keywords, and the same authors. Speed-the-arxiv tries to speed these searches up.
-            Together with a little HTML, it checks the latest on the Arxiv based on sections, keywords, and authors of choice. 
-            These keys are stored in <code>.yaml</code> files and reused every time you run the script. Additional parameters in the file let you personalize the search criteria. 
-            In the folder <code>search/</code>, you can have as many <code>.yaml</code> files as you want. You can choose what to search for on the landing page of <code>speedthearxiv.py</code>.
-            The script uses Flask to query the Arxiv API and it shows the results in a clean HTML page. It includes collapsible abstracts and links to the articles.
-            If needed, it checks and associates the Scirates to each article. Javascript behind for some dynamicity.
-            Ajax takes care of making the search buttons and Flask talk. As the latest addition, you can search bibtex entries using Crossref.
+            You know the drill. Wake up, coffee, arXiv. Same sections, same keywords, same authors &mdash; every single day.
+            Speed-the-arxiv exists so you can do that in seconds instead of minutes, and maybe enjoy the coffee a bit more.
         </p>
-        <p>⚠️ Fetching the Scirates slows down the app quite a bit. Unfortunately, no API is available for this and I had to fetch it "manually".</p>
-
-        <h4>A note on "learned" data</h4>
         <p>
-            I thought about using ML (I even started the relative branch) to predict what you might be interested in, but I chose to drop the ball.
-            The reason is simple, I want speed-the-arxiv to return a broader spectrum of results, including some exotic catches.
-            Reading exclusively ad-hoc papers based on your past preferences does not incentivate creativity or change, keys in research.
-            On the other hand, I want you to find something relevant to your work, without losing focus. That is why the search criteria can distill
-            the vastest of the fields. There you have it, choose your set of parameters for your search, click the button, and start exploring.
+            Define your searches in <code>.yaml</code> configs (or create them right from the UI), hit a button, and get a clean page
+            of results with collapsible abstracts, LaTeX rendering, SciRate scores, and one-click BibTeX &mdash; no copy-pasting DOIs into
+            twelve different tabs.
+        </p>
+
+        <h4>What it does</h4>
+        <ul>
+            <li><strong>Configurable searches</strong> &mdash; sections, keywords, authors, logical operators, date ranges, all in tidy <code>.yaml</code> files you can create, edit, duplicate, and delete from the browser.</li>
+            <li><strong>Dark &amp; light theme</strong> &mdash; because not everyone wants to stare into the void (or into the sun).</li>
+            <li><strong>Sort, filter, paginate</strong> &mdash; sort by date, SciRate score, or title. Filter results in real time. 25 papers per page so your browser doesn't melt.</li>
+            <li><strong>SciRate scores</strong> &mdash; fetched asynchronously with concurrency limits and timeouts, so you get scores without hammering the internet.</li>
+            <li><strong>BibTeX on demand</strong> &mdash; auto-generated for every paper, copy to clipboard with one click. Need a specific DOI? The Crossref lookup on the landing page has you covered.</li>
+            <li><strong>Keyword &amp; author highlighting</strong> &mdash; toggle-able, so the important bits jump out at you.</li>
+            <li><strong>MathJax</strong> &mdash; LaTeX in titles and abstracts rendered properly, as nature intended.</li>
+            <li><strong>Caching</strong> &mdash; results are cached locally with a visible age indicator so you know exactly how stale your data is.</li>
+            <li><strong>Robust error handling</strong> &mdash; timeouts, API failures, and unreachable endpoints all get friendly messages instead of blank screens.</li>
+        </ul>
+
+        <h4>Why no ML?</h4>
+        <p>
+            I thought about it. I even started the branch. Then I dropped it.
+            The reason is simple: a recommendation engine narrows your reading to papers that look like what you already read.
+            That's great for efficiency, terrible for serendipity.
+            Speed-the-arxiv casts a wider net on purpose &mdash; you set the parameters, the search distills the field,
+            and every now and then something unexpected catches your eye. That's the good stuff.
         </p>
 
         <h4>Links</h4>
-            <p>speed-the-arxiv -> <a href="https://github.com/mekise/speed-the-arxiv/" target="_blank">github</a></p>
-            <p>Stefano Scali -> 
-                <a href= "mailto:s.scali@exeter.ac.uk">s.scali@exeter.ac.uk</a> |
+            <p>speed-the-arxiv &rarr; <a href="https://github.com/mekise/speed-the-arxiv/" target="_blank">github</a></p>
+            <p>Stefano Scali &rarr;
+                <a href="mailto:scali.stefano@gmail.com">scali.stefano@gmail.com</a> |
                 <a href="https://www.stefanoscali.xyz/" target="_blank">website</a> |
                 <a href="https://scholar.google.com/citations?user=j7dg-xwAAAAJ&hl=en" target="_blank">scholar</a> |
                 <a href="https://github.com/mekise" target="_blank">github</a> |
-                <a href="https://www.linkedin.com/in/stefano-scali/" target="_blank">linkedin</a> |
-                <a href="https://twitter.com/phystefano" target="_blank">twitter</a>
+                <a href="https://www.linkedin.com/in/stefano-scali/" target="_blank">linkedin</a>
             </p>
     </div>
 </div>

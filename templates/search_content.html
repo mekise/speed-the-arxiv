@@ -1,7 +1,11 @@
 <div class="container" id="search-nav">
-    <nav class="fixed-top topmargin-nav align-middle">
-        <div class="container">
-            search: {{ search_name }}.yaml &nbsp;&nbsp; - &nbsp;&nbsp;
+    <nav class="topmargin-nav align-middle" id="search-toolbar">
+        <div class="container" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
+            {% if adhoc_search %}
+            <span>search: {{ search_name }} &nbsp;-&nbsp;</span>
+            {% else %}
+            <span>search: {{ search_name }}.yaml &nbsp;-&nbsp;</span>
+            {% endif %}
             {% if fetched_at %}
             <span style="font-size: 0.8rem; opacity: 0.6;">fetched: {{ fetched_at }}</span>
             {% endif %}
@@ -11,8 +15,21 @@
             {% if config_changed %}
             <span class="cache-stale-warning">&#9888; search config has changed since last fetch &mdash; consider refreshing</span>
             {% endif %}
+            {% if not adhoc_search %}
             <button class="tools tools-box" id="refresh-btn" data-search="{{ search_name }}">refresh</button>
-            <div class="dropdown d-inline-block" style="margin-left: 8px;">
+            {% endif %}
+            {% if adhoc_search %}
+            <span class="save-adhoc-inline" style="display: inline-flex; align-items: center; gap: 4px;">
+                <input type="text" id="save-adhoc-name" class="config-input" placeholder="name for this search" style="width: 180px; font-size: 0.8rem;">
+                <button class="tools tools-box" id="save-adhoc-btn"
+                    data-query="{{ adhoc_search.query }}"
+                    data-field="{{ adhoc_search.field }}"
+                    data-max-results="{{ adhoc_search.max_results }}"
+                    data-sortby="{{ adhoc_search.sortby }}"
+                    data-sortorder="{{ adhoc_search.sortorder }}">save to Speed the Arxiv</button>
+            </span>
+            {% endif %}
+            <div class="dropdown d-inline-block">
                 <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">sort</button>
                 <ul class="dropdown-menu stats-dropdown-menu" style="min-width: 150px; padding: 6px 0;">
                     <li><a class="dropdown-item sort-option" href="#" data-sort="date" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Date (newest)</a></li>
@@ -28,33 +45,30 @@
             <button class="tools tools-box" onclick="toggleAllAbstracts()">expand all abstracts</button>
             <button class="tools tools-box" onclick="highlight({{ keywords }})">highlight keywords</button>
             <button class="tools tools-box" onclick="highlight({{ keyauthors }})">highlight keyauthors</button>
-            <br>
-            <div class="nav-stats-row">
-                <div class="dropdown d-inline-block">
-                    <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Stats ({{ papers|length }} papers)
-                    </button>
-                    <div class="dropdown-menu stats-dropdown-menu">
-                        <ul class="list-group">
-                            <li><strong>Total papers:</strong> {{ papers|length }}</li>
-                            {% if sections %}
-                            <li><strong>Sections ({{ sections|length }}):</strong> {{ sections|join(', ') }}</li>
-                            {% endif %}
-                            {% if keywords %}
-                            <li><strong>Keywords ({{ keywords|length }}):</strong> {{ keywords|join(', ') }}</li>
-                            {% endif %}
-                            {% if keyauthors %}
-                            <li><strong>Key authors ({{ keyauthors|length }}):</strong> {{ keyauthors|join(', ') }}</li>
-                            {% endif %}
-                            {% if papers %}
-                            <li><strong>Date range:</strong> {{ papers[-1].date }} to {{ papers[0].date }}</li>
-                            {% endif %}
-                        </ul>
-                    </div>
+            <div class="dropdown d-inline-block">
+                <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Stats ({{ papers|length }} papers)
+                </button>
+                <div class="dropdown-menu stats-dropdown-menu">
+                    <ul class="list-group">
+                        <li><strong>Total papers:</strong> {{ papers|length }}</li>
+                        {% if sections %}
+                        <li><strong>Sections ({{ sections|length }}):</strong> {{ sections|join(', ') }}</li>
+                        {% endif %}
+                        {% if keywords %}
+                        <li><strong>Keywords ({{ keywords|length }}):</strong> {{ keywords|join(', ') }}</li>
+                        {% endif %}
+                        {% if keyauthors %}
+                        <li><strong>Key authors ({{ keyauthors|length }}):</strong> {{ keyauthors|join(', ') }}</li>
+                        {% endif %}
+                        {% if papers %}
+                        <li><strong>Date range:</strong> {{ papers[-1].date }} to {{ papers[0].date }}</li>
+                        {% endif %}
+                    </ul>
                 </div>
-                <input type="text" id="filter-input" class="filter-input" placeholder="filter papers..." autocomplete="off">
-                <span id="filter-count" style="font-size: 0.8rem; opacity: 0.6; margin-left: 8px;"></span>
             </div>
+            <input type="text" id="filter-input" class="filter-input" placeholder="filter papers..." autocomplete="off">
+            <span id="filter-count" style="font-size: 0.8rem; opacity: 0.6;"></span>
         </div>
     </nav>
 </div>
@@ -78,6 +92,15 @@
                     <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
                 </svg>
             </button>
+            {% if paper.related_doi %}
+            <button class="icons copy-crossref-bibtex-btn" title="Copy Crossref BibTeX for DOI: {{ paper.related_doi }}" data-doi="{{ paper.related_doi }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-journal-bookmark" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M6 8V1h1v6.117L8.743 6.07a.5.5 0 0 1 .514 0L11 7.117V1h1v7a.5.5 0 0 1-.757.429L9 7.083 6.757 8.43A.5.5 0 0 1 6 8"/>
+                    <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
+                    <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
+                </svg>
+            </button>
+            {% endif %}
         </p>
         <p>
         {% if run_scirate %}
@@ -97,7 +120,7 @@
         {% endif %}
         </p>
         <div id="summary-{{ loop.index }}" class="collapse">
-            <div class="card card-body"><p>{{ paper.summary }}</p></div>
+            <div class="card card-body"><p style="margin-bottom:0">{{ paper.summary }}</p></div>
         </div>
     </div>
     <hr style="background-color:gray; margin-bottom: 30px;">

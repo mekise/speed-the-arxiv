@@ -11,6 +11,80 @@ $(document).ready(function() {
         event.preventDefault();
     });
 
+    // Arxiv ad-hoc search form
+    $('#arxiv-search-form').on('submit', function(event) {
+        event.preventDefault();
+        var query = $('#arxiv-search-query').val().trim();
+        if (!query) return;
+        var $btn = $('#arxiv-search-btn');
+        $btn.html('<span class="spinner-inline"></span>');
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: '/arxiv_search',
+            contentType: 'application/json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: JSON.stringify({
+                query: query,
+                field: $('#arxiv-search-field').val(),
+                max_results: $('#arxiv-search-max').val(),
+                sortby: $('#arxiv-search-sortby').val(),
+                sortorder: $('#arxiv-search-sortorder').val()
+            }),
+            success: function(html) {
+                var $header = $('#fixed-header');
+                $header.find('#search-toolbar').remove();
+                var $content = $('#main-content');
+                $content.html(html);
+                // Move new search toolbar into the fixed header
+                var $toolbar = $content.find('#search-toolbar');
+                if ($toolbar.length) $toolbar.appendTo($header);
+                if (typeof updateBodyPadding === 'function') updateBodyPadding();
+                window.scrollTo(0, 0);
+                currentPage = 1;
+                applyPagination();
+            },
+            error: function(xhr) {
+                var msg = 'Error performing search.';
+                try { msg = xhr.responseJSON.error || msg; } catch(e) {}
+                $btn.html('Search');
+                $btn.prop('disabled', false);
+                alert(msg);
+            }
+        });
+    });
+
+    // Save ad-hoc search to Speed the Arxiv
+    $(document).on('click', '#save-adhoc-btn', function() {
+        var $btn = $(this);
+        var name = $('#save-adhoc-name').val().trim();
+        if (!name) { alert('Please enter a name for the search'); return; }
+        $btn.text('saving...');
+        $.ajax({
+            type: 'POST',
+            url: '/save_adhoc_search',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: name,
+                query: $btn.data('query'),
+                field: $btn.data('field'),
+                max_results: $btn.data('max-results'),
+                sortby: $btn.data('sortby'),
+                sortorder: $btn.data('sortorder')
+            }),
+            success: function() {
+                $btn.text('saved!');
+                setTimeout(function() { $btn.text('save to Speed the Arxiv'); }, 2000);
+            },
+            error: function(xhr) {
+                $btn.text('save to Speed the Arxiv');
+                var msg = 'Error saving search.';
+                try { msg = xhr.responseJSON.error || msg; } catch(e) {}
+                alert(msg);
+            }
+        });
+    });
+
     $('#new-config-btn').on('click', function() {
         $('#new-config-form').toggle();
     });
@@ -124,8 +198,15 @@ function loadSearch(url, searchName, $btn) {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
         data: JSON.stringify({'search': searchName}),
         success: function(html) {
+            // Remove old toolbar from fixed header before inserting new content
+            var $header = $('#fixed-header');
+            $header.find('#search-toolbar').remove();
             var $content = $('#main-content');
             $content.html(html);
+            // Move new search toolbar into the fixed header
+            var $toolbar = $content.find('#search-toolbar');
+            if ($toolbar.length) $toolbar.appendTo($header);
+            if (typeof updateBodyPadding === 'function') updateBodyPadding();
             window.scrollTo(0, 0);
             currentPage = 1;
             applyPagination();

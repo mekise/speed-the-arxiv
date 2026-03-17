@@ -82,20 +82,43 @@ mjx-container:not([display="true"]) {
     color: var(--c-nav);
     font-size: 3.2rem;
     font-family: 'VT323', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+    .speedthearxiv {
+        font-size: 2.2rem;
+        gap: 4px;
+    }
+}
+
+#fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    background-color: var(--c-background);
 }
 
 .topmargin {
-    margin-top: 120px;
+    margin-top: 20px;
 }
 
 .topmargin-nav {
-    margin-top: 80px;
     padding-top: 8px;
     padding-bottom: 8px;
+    background-color: var(--c-background);
+    border-bottom: 1px solid var(--c-border);
 }
 
 .topmargin-papers {
-    margin-top: 200px;
+    margin-top: 20px;
 }
 
 .paper {
@@ -428,7 +451,8 @@ input[type=text] {
     to { transform: rotate(360deg); }
 }
 
-#doi-search-btn {
+#doi-search-btn,
+#arxiv-search-btn {
     background: none;
     border: none;
     padding: 2px 4px;

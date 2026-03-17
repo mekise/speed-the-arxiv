@@ -88,6 +88,140 @@ def search():
         return render_search(config, cached['papers'], cached['fetched_at'], config_changed=config_changed)
     return do_fetch_and_render(config)
 
+@app.route("/arxiv_search", methods=['POST'])
+def arxiv_search():
+    data = request.get_json()
+    query_text = data.get('query', '').strip()
+    field = data.get('field', 'all')
+    max_results = int(data.get('max_results', 50))
+    sortby = data.get('sortby', 'relevance')
+    sortorder = data.get('sortorder', 'descending')
+
+    if not query_text:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "Please enter a search query"}), 400
+        return _render_index(error="Please enter a search query")
+
+    # Build arxiv API search query
+    allowed_fields = {'all', 'ti', 'au', 'abs', 'cat', 'co', 'jr'}
+    if field not in allowed_fields:
+        field = 'all'
+    if max_results < 1:
+        max_results = 1
+    elif max_results > 500:
+        max_results = 500
+
+    # URL-encode the query
+    encoded_query = f"{field}:{query_text}".replace(" ", "%20")
+    url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
+
+    try:
+        response = requests.get(url, timeout=120)
+    except requests.exceptions.Timeout:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "arXiv API timed out. Try again later."}), 504
+        return _render_index(error="arXiv API timed out.")
+    except requests.exceptions.RequestException:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "Could not reach arXiv API."}), 502
+        return _render_index(error="Could not reach arXiv API.")
+
+    if response.status_code == 200:
+        feeds = feedparser.parse(response.text)
+        if feeds.entries and feeds.entries[0].id.startswith('https://arxiv.org/api/errors'):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"error": "arXiv API returned an error. Try simplifying your query."}), 502
+            return _render_index(error="arXiv API returned an error.")
+
+        papers = []
+        for entry in feeds.entries:
+            paper = process_entry_adhoc(entry)
+            if paper:
+                papers.append(paper)
+
+        fetched_at = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        adhoc_params = {
+            'query': query_text,
+            'field': field,
+            'max_results': max_results,
+            'sortby': sortby,
+            'sortorder': sortorder,
+        }
+
+        template_args = dict(
+            papers=papers,
+            keyauthors=[],
+            keywords=[query_text] if field != 'au' else [],
+            sections=[],
+            search_name=f"search: {field}:{query_text}",
+            run_scirate=False,
+            fetched_at=fetched_at,
+            cache_stale=False,
+            config_changed=False,
+            adhoc_search=adhoc_params,
+        )
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render_template("search_content.html", **template_args)
+        return render_template("search.html", **template_args)
+    else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": f"arXiv API returned status {response.status_code}."}), 502
+        return _render_index(error=f"arXiv API returned status {response.status_code}.")
+
+@app.route("/save_adhoc_search", methods=['POST'])
+def save_adhoc_search():
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    if not name or '/' in name or '\\' in name or '..' in name:
+        return jsonify({"error": "Invalid search name"}), 400
+    config_path = os.path.join('search', name + '.yaml')
+    if os.path.exists(config_path):
+        return jsonify({"error": "A search with this name already exists"}), 409
+
+    query = data.get('query', '').strip()
+    field = data.get('field', 'all')
+    max_results = int(data.get('max_results', 50))
+    sortby = data.get('sortby', 'relevance')
+    sortorder = data.get('sortorder', 'descending')
+
+    # Map ad-hoc search to Speed the Arxiv config format
+    sections = []
+    keyauthors = []
+    keywords = []
+
+    terms = [t.strip() for t in query.split(',') if t.strip()] if ',' in query else [query]
+
+    if field == 'cat':
+        sections = terms
+    elif field == 'au':
+        keyauthors = terms
+    else:
+        keywords = terms
+
+    config = {
+        'max_results': max_results,
+        'past_days': 365,
+        'literal': field not in ('au', 'cat'),
+        'run_scirate': False,
+        'arxiv_sortby': sortby,
+        'arxiv_sortorder': sortorder,
+        'sortby': ['date'],
+        'sortorder_rev': True,
+        'and_or_sections': '+OR+',
+        'and_or_keyauthors': '+OR+',
+        'and_or': '+OR+',
+        'and_or_keywords': '+OR+',
+        'keys': {
+            'sections': sections,
+            'keyauthors': keyauthors,
+            'keywords': keywords,
+        }
+    }
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=None, sort_keys=False)
+    return jsonify({"message": "Search saved", "name": name})
+
 @app.route("/refresh", methods=['POST'])
 def refresh():
     if request.method == "POST":
@@ -172,7 +306,7 @@ def render_search(config, papers, fetched_at, config_changed=False):
         sections=[section for section in config["sections"]],
         search_name=config['name'], run_scirate=config['run_scirate'],
         fetched_at=fetched_at, cache_stale=cache_stale,
-        config_changed=config_changed)
+        config_changed=config_changed, adhoc_search=None)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template("search_content.html", **template_args)
     return render_template("search.html", **template_args)
@@ -247,40 +381,50 @@ def process_entry(entry, past_days, scirate):
     checkdate = entry.updated[0:10]
     entry_date = dt.date.fromisoformat(checkdate)
     if dt.date.today() - entry_date <= dt.timedelta(days=past_days):
-        primary_cat = entry.get('arxiv_primary_category', {}).get('term', '')
-        all_cats = [tag['term'] for tag in entry.get('tags', [])]
-        other_cats = [cat for cat in all_cats if cat != primary_cat]
-        if other_cats:
-            category = primary_cat + " (" + ", ".join(other_cats) + ")"
-        else:
-            category = primary_cat
-        arxiv_id = entry.id.split('/abs/')[-1]
-        arxiv_id_clean = arxiv_id.split('v')[0]
-        first_author = entry.authors[0].name.split()[-1].lower() if entry.authors else 'unknown'
-        year = checkdate[:4]
-        authors_bibtex = " and ".join(author.name for author in entry.authors)
-        doi = entry.get('arxiv_doi', '') or f"10.48550/arXiv.{arxiv_id_clean}"
-        doi_line = f"\tdoi={{{doi}}},\n" if doi else ""
-        bibtex = (f"@article{{{first_author}{year}{arxiv_id_clean},\n"
-                  f"\ttitle={{{entry.title}}},\n"
-                  f"\tauthor={{{authors_bibtex}}},\n"
-                  f"\tyear={{{year}}},\n"
-                  f"{doi_line}"
-                  f"\teprint={{{arxiv_id_clean}}},\n"
-                  f"\tarchivePrefix={{arXiv}},\n"
-                  f"\tprimaryClass={{{primary_cat}}}\n}}")
-        return {
-            "title": entry.title,
-            "authors": ", ".join(author.name for author in entry.authors),
-            "summary": entry.summary,
-            "date": checkdate,
-            "category": category,
-            "abs_url": entry.link,
-            "pdf_url": entry.link.replace('/abs/', '/pdf/'),
-            "scirate": scirate,
-            "bibtex": bibtex
-        }
+        return _build_paper_dict(entry, checkdate, scirate)
     return None
+
+def process_entry_adhoc(entry):
+    """Process an arxiv entry without date filtering (for ad-hoc searches)."""
+    checkdate = entry.updated[0:10]
+    return _build_paper_dict(entry, checkdate, 0)
+
+def _build_paper_dict(entry, checkdate, scirate):
+    primary_cat = entry.get('arxiv_primary_category', {}).get('term', '')
+    all_cats = [tag['term'] for tag in entry.get('tags', [])]
+    other_cats = [cat for cat in all_cats if cat != primary_cat]
+    if other_cats:
+        category = primary_cat + " (" + ", ".join(other_cats) + ")"
+    else:
+        category = primary_cat
+    arxiv_id = entry.id.split('/abs/')[-1]
+    arxiv_id_clean = arxiv_id.split('v')[0]
+    first_author = entry.authors[0].name.split()[-1].lower() if entry.authors else 'unknown'
+    year = checkdate[:4]
+    authors_bibtex = " and ".join(author.name for author in entry.authors)
+    related_doi = entry.get('arxiv_doi', '')
+    doi = related_doi or f"10.48550/arXiv.{arxiv_id_clean}"
+    doi_line = f"\tdoi={{{doi}}},\n" if doi else ""
+    bibtex = (f"@article{{{first_author}{year}{arxiv_id_clean},\n"
+              f"\ttitle={{{entry.title}}},\n"
+              f"\tauthor={{{authors_bibtex}}},\n"
+              f"\tyear={{{year}}},\n"
+              f"{doi_line}"
+              f"\teprint={{{arxiv_id_clean}}},\n"
+              f"\tarchivePrefix={{arXiv}},\n"
+              f"\tprimaryClass={{{primary_cat}}}\n}}")
+    return {
+        "title": entry.title,
+        "authors": ", ".join(author.name for author in entry.authors),
+        "summary": entry.summary,
+        "date": checkdate,
+        "category": category,
+        "abs_url": entry.link,
+        "pdf_url": entry.link.replace('/abs/', '/pdf/'),
+        "scirate": scirate,
+        "bibtex": bibtex,
+        "related_doi": related_doi
+    }
     
 def format_bibtex_string(input_string):
     formatted_string = input_string.replace(' @', '@').replace(', title={', ',\n\ttitle={').replace('}, ', '},\n\t').replace('} }', '}\n}')

@@ -32,9 +32,9 @@
                 if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
             })();
         </script>
-        <div class="container">
-            <nav class="navbar fixed-top">
-                <div class="container justify-content-center">
+        <div id="fixed-header">
+        <nav class="navbar" id="title-bar">
+            <div class="container justify-content-center">
                     <h1 class="speedthearxiv">
                         <a href="/about"; style="color:inherit; font-family: 'Roboto', sans-serif; font-size: 1rem;">about</a>
                         <a href="/"; style="color: inherit;">speed-the-arxiv</a>
@@ -48,8 +48,8 @@
                             </svg>
                         </button>
                     </h1>
-                </div>
-            </nav>
+            </div>
+        </nav>
         </div>
         <script>
             function toggleTheme() {
@@ -69,6 +69,16 @@
                 document.getElementById('theme-icon-sun').style.display = isLight ? 'none' : 'inline';
             }
             updateThemeIcon();
+        </script>
+        <script>
+            function updateBodyPadding() {
+                var h = document.getElementById('fixed-header');
+                if (h) document.body.style.paddingTop = h.offsetHeight + 'px';
+            }
+            window.addEventListener('load', updateBodyPadding);
+            window.addEventListener('resize', updateBodyPadding);
+            var _ubpObs = new MutationObserver(updateBodyPadding);
+            _ubpObs.observe(document.getElementById('fixed-header'), {childList: true, subtree: true});
         </script>
         <div class="container" id="main-content">
             {% block content %}

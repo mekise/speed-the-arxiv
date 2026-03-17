@@ -3,8 +3,8 @@
 {% block content %}
 <div class="topmargin">
     <div class="crossref-box">
-        <h4>Search Crossref</h4>
-        <p>Visit <a href="https://search.crossref.org/" target="_blank">https://search.crossref.org/</a> if you find any issue with the entry.</p>
+        <h4>Bibtex search - Crossref</h4>
+        <p>Look up a DOI to retrieve its formatted BibTeX entry from Crossref.</p>
         <form id="doi-form">
             <label for="search_query">Enter a DOI or DOI URL:</label>
             <input type="text" id="search_query" name="search_query" required placeholder="10.1234/... or https://doi.org/...">
@@ -18,18 +18,67 @@
             <div id="doi-result"></div>
         </form>
     </div>
+    <br> 
+    <div class="crossref-box">
+        <h4>Arxiv search</h4>
+        <p>Direct search of the arXiv API. Select a search field and enter your query.</p>
+        <form id="arxiv-search-form">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px;">
+                <label style="font-size: 0.8rem; opacity: 0.7;">
+                    Search in
+                    <select class="config-input" id="arxiv-search-field" style="width: 140px;">
+                        <option value="all" selected>All fields</option>
+                        <option value="ti">Title</option>
+                        <option value="au">Author</option>
+                        <option value="abs">Abstract</option>
+                        <option value="cat">Category</option>
+                        <option value="co">Comment</option>
+                        <option value="jr">Journal ref</option>
+                    </select>
+                </label>
+                <label style="font-size: 0.8rem; opacity: 0.7;">
+                    Query
+                    <input type="text" class="config-input" id="arxiv-search-query" placeholder="e.g. quantum computing" style="width: 300px;" required>
+                </label>
+                <button type="submit" class="button" id="arxiv-search-btn">Search</button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px;">
+                <label style="font-size: 0.8rem; opacity: 0.7;">
+                    Max results
+                    <input type="number" class="config-input" id="arxiv-search-max" value="50" min="1" max="500" style="width: 80px;">
+                </label>
+                <label style="font-size: 0.8rem; opacity: 0.7;">
+                    Sort by
+                    <select class="config-input" id="arxiv-search-sortby" style="width: 160px;">
+                        <option value="relevance" selected>Relevance</option>
+                        <option value="submittedDate">Submitted date</option>
+                        <option value="lastUpdatedDate">Last updated</option>
+                    </select>
+                </label>
+                <label style="font-size: 0.8rem; opacity: 0.7;">
+                    Sort order
+                    <select class="config-input" id="arxiv-search-sortorder" style="width: 120px;">
+                        <option value="descending" selected>Descending</option>
+                        <option value="ascending">Ascending</option>
+                    </select>
+                </label>
+            </div>
+        </form>
+    </div>
     <br>
-    <h4>Search Arxiv</h4>
-    <p>
-        <button class="icons" title="Open search folder" onclick="openLocalFolder()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
-                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z"/>
-            </svg>
-        </button>
-        <button type="button" class="tools tools-box create-new-btn" id="new-config-btn">Create new search</button>
-    </p>
+    <div class="crossref-box">
+        <h4>speed-the-arxiv</h4>
+        <p>Run preset search queries of the arXiv API.</p>
+        <p>
+            <button type="button" class="tools tools-box create-new-btn" id="new-config-btn">Create new search</button>
+            <button class="icons" title="Open search folder" onclick="openLocalFolder()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
+                    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14V3.5zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5V6zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7H1.633z"/>
+                </svg>
+            </button>
+        </p>
 
-    <div id="new-config-form" style="display: none; margin-bottom: 20px;">
+        <div id="new-config-form" style="display: none; margin-bottom: 20px;">
         <div class="config-edit-card">
             <label style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 6px;">Name <input type="text" class="config-input" id="new-cfg-name" placeholder="my-search" style="width: 250px;"></label>
             <div class="config-form-grid">
@@ -96,5 +145,6 @@
         </div>
         </div>
     {% endfor %}
+    </div>
 </div>
 {% endblock %}

@@ -280,6 +280,26 @@ $(document).ready(function() {
         });
     });
 
+    // ── Export BibTeX ──────────────────────────────────────────────────────
+    $(document).on('click', '#export-bibtex-btn', function() {
+        var entries = [];
+        $('.paper-wrapper:visible').each(function() {
+            var bib = $(this).find('.copy-bibtex-btn').attr('data-bibtex');
+            if (bib) entries.push(bib.trim());
+        });
+        if (!entries.length) { alert('No visible papers with BibTeX.'); return; }
+        var name = prompt('Filename for the .bib file:', 'favourites');
+        if (!name || !name.trim()) return;
+        name = name.trim().replace(/\.bib$/i, '');
+        var blob = new Blob([entries.join('\n\n')], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var $a = $('<a>').attr({ href: url, download: name + '.bib' });
+        $('body').append($a);
+        $a[0].click();
+        $a.remove();
+        URL.revokeObjectURL(url);
+    });
+
     // ── Tag filtering ──────────────────────────────────────────────────────
     var activeTags = [];
 

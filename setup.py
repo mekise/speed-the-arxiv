@@ -16,7 +16,8 @@ setup(
         "habanero",
         "waitress",
         "beautifulsoup4",
-        "aiohttp"
+        "aiohttp",
+        "pymupdf"
     ],
     include_package_data=True,
     entry_points={

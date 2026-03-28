@@ -2,6 +2,8 @@ search/*
 !search/config.yaml
 
 cache/
+favourites/
+notes/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,9 +1,16 @@
 import os
+import re
 import json
 import platform
 import subprocess
 import yaml
 import requests
+
+try:
+    import fitz as _fitz
+    _PYMUPDF = True
+except ImportError:
+    _PYMUPDF = False
 
 ARXIV_HEADERS = {'User-Agent': 'speed-the-arxiv/1.0 (https://github.com/mekise/speed-the-arxiv)'}
 import feedparser
@@ -11,7 +18,7 @@ import asyncio
 import aiohttp
 import webbrowser
 import datetime as dt
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from habanero import cn
 from bs4 import BeautifulSoup
 
@@ -19,9 +26,17 @@ app_port = 8080
 app = Flask(__name__)
 CACHE_DIR = './cache'
 os.makedirs(CACHE_DIR, exist_ok=True)
-FAVOURITES_FILE = './favourites.json'
+FAVOURITES_DIR = './favourites'
+os.makedirs(FAVOURITES_DIR, exist_ok=True)
+FAVOURITES_FILE = os.path.join(FAVOURITES_DIR, 'favourites.json')
 NOTES_DIR = './notes'
 os.makedirs(NOTES_DIR, exist_ok=True)
+
+# Migrate legacy favourites.json to new location
+_legacy = './favourites.json'
+if os.path.exists(_legacy) and not os.path.exists(FAVOURITES_FILE):
+    import shutil
+    shutil.move(_legacy, FAVOURITES_FILE)
 
 def load_favourites():
     if os.path.exists(FAVOURITES_FILE):
@@ -131,6 +146,215 @@ def save_note():
         save_favourites(favs)
         auto_starred = True
     return jsonify({"saved": True, "auto_starred": auto_starred})
+
+# ── PDF scanning helpers ────────────────────────────────────────────────────
+
+# Labeled arXiv ID: "arXiv:2301.12345" or DOI form "10.48550/arXiv.2301.12345"
+_ARXIV_LABELED = re.compile(
+    r'(?:arXiv[:\s]+(\d{4}\.\d{4,5})(?:v\d+)?'
+    r'|10\.48550/arXiv\.(\d{4}\.\d{4,5}))',
+    re.IGNORECASE
+)
+# Generic DOI
+_DOI_RE = re.compile(r'\b(10\.\d{4,9}/[^\s\]},;\"\'<>\[\)]+)', re.IGNORECASE)
+
+
+def _find_ids(text):
+    """Return (arxiv_id, doi) from text. arXiv ID takes precedence."""
+    for m in _ARXIV_LABELED.finditer(text):
+        aid = m.group(1) or m.group(2)
+        return aid, None
+    m = _DOI_RE.search(text)
+    return None, m.group(1).rstrip('.,') if m else None
+
+
+def _scan_pdf(path):
+    """
+    Extract arXiv ID or DOI from a PDF using a layered strategy:
+      1. filename  2. PDF metadata  3. XMP metadata  4. first-page text
+    Returns {'arxiv_id', 'doi', 'source'}.
+    """
+    stem = os.path.splitext(os.path.basename(path))[0]
+
+    # 1. filename: covers all arXiv downloads (e.g. "2301.12345v2.pdf")
+    m = re.match(r'^(\d{4}\.\d{4,5})(?:v\d+)?$', stem)
+    if m:
+        return {'arxiv_id': m.group(1), 'doi': None, 'source': 'filename'}
+
+    if not _PYMUPDF:
+        return {'arxiv_id': None, 'doi': None, 'source': 'unresolved'}
+
+    fallback_doi = None
+    try:
+        doc = _fitz.open(path)
+
+        # 2. Standard PDF metadata fields
+        for val in (doc.metadata or {}).values():
+            if not val:
+                continue
+            aid, doi = _find_ids(val)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'pdf_metadata'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        # 3. XMP metadata (richer: dc:identifier, prism:doi, etc.)
+        xmp = doc.get_xml_metadata() or ''
+        if xmp:
+            aid, doi = _find_ids(xmp)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'xmp'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        # 4. First-page text (arXiv always stamps ID in header/footer)
+        if doc.page_count > 0:
+            text = doc[0].get_text()
+            aid, doi = _find_ids(text)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'page_text'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        doc.close()
+    except Exception:
+        pass
+
+    src = 'page_text' if fallback_doi else 'unresolved'
+    return {'arxiv_id': None, 'doi': fallback_doi, 'source': src}
+
+
+def _fetch_arxiv_paper(arxiv_id):
+    url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1"
+    try:
+        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=30)
+        if resp.status_code == 200:
+            feeds = feedparser.parse(resp.text)
+            if feeds.entries:
+                return process_entry_adhoc(feeds.entries[0])
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_doi_paper(doi):
+    try:
+        resp = requests.get(
+            f"https://api.crossref.org/works/{requests.utils.quote(doi, safe='/')}",
+            headers={'User-Agent': ARXIV_HEADERS['User-Agent']}, timeout=30
+        )
+        if resp.status_code != 200:
+            return None
+        msg = resp.json().get('message', {})
+        title = (msg.get('title') or [''])[0]
+        authors = ', '.join(
+            ' '.join(filter(None, [a.get('given'), a.get('family')]))
+            for a in msg.get('author', [])
+        )
+        dp = ((msg.get('published') or msg.get('created') or {})
+              .get('date-parts', [[]])[0])
+        date = '-'.join(str(p).zfill(2) for p in dp[:3]) if dp else ''
+        try:
+            bibtex = format_bibtex_string(cn.content_negotiation(ids=doi, format="bibentry"))
+        except Exception:
+            bibtex = ''
+        safe_id = 'doi_' + re.sub(r'[^\w.-]', '_', doi)
+        return {
+            'arxiv_id': safe_id,
+            'title': title,
+            'authors': authors,
+            'date': date[:10],
+            'abs_url': f"https://doi.org/{doi}",
+            'pdf_url': f"https://doi.org/{doi}",
+            'category': msg.get('type', ''),
+            'summary': BeautifulSoup(msg.get('abstract') or '', 'html.parser').get_text().strip(),
+            'bibtex': bibtex,
+            'related_doi': doi,
+            'scirate': 0,
+        }
+    except Exception:
+        return None
+
+
+@app.route("/scan_favourites", methods=['GET'])
+def scan_favourites():
+    existing_ids = {f['arxiv_id'] for f in load_favourites()}
+    try:
+        pdf_files = sorted(f for f in os.listdir(FAVOURITES_DIR) if f.lower().endswith('.pdf'))
+    except OSError:
+        return jsonify([])
+
+    results = []
+    for pdf_file in pdf_files:
+        info = _scan_pdf(os.path.join(FAVOURITES_DIR, pdf_file))
+        arxiv_id = info['arxiv_id']
+        doi = info['doi']
+
+        # DOI that encodes an arXiv ID (10.48550/arXiv.XXXX.XXXXX)
+        if not arxiv_id and doi:
+            m = re.match(r'10\.48550/arXiv\.(\d{4}\.\d{4,5})', doi, re.IGNORECASE)
+            if m:
+                arxiv_id = m.group(1)
+                doi = None
+
+        if arxiv_id:
+            if arxiv_id in existing_ids:
+                continue
+            paper = _fetch_arxiv_paper(arxiv_id)
+        elif doi:
+            safe_id = 'doi_' + re.sub(r'[^\w.-]', '_', doi)
+            if safe_id in existing_ids:
+                continue
+            paper = _fetch_doi_paper(doi)
+        else:
+            paper = None
+
+        entry = paper or {
+            'arxiv_id': arxiv_id or doi or '',
+            'title': '', 'authors': '', 'date': '',
+            'abs_url': '', 'category': '', 'summary': '', 'bibtex': '',
+        }
+        entry['filename'] = pdf_file
+        entry['pdf_url'] = f"/local_pdf/{pdf_file}"
+        entry['detection_source'] = info['source']
+        entry['unresolved'] = paper is None
+        results.append(entry)
+
+    return jsonify(results)
+
+
+@app.route("/import_local_paper", methods=['POST'])
+def import_local_paper():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    favs = load_favourites()
+    if any(f['arxiv_id'] == arxiv_id for f in favs):
+        return jsonify({"imported": False, "reason": "already_exists"})
+    favs.append({
+        'arxiv_id': arxiv_id,
+        'title': data.get('title', ''),
+        'authors': data.get('authors', ''),
+        'date': data.get('date', ''),
+        'abs_url': data.get('abs_url', ''),
+        'pdf_url': data.get('pdf_url', ''),
+        'bibtex': data.get('bibtex', ''),
+        'category': data.get('category', ''),
+        'summary': data.get('summary', ''),
+        'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+    })
+    save_favourites(favs)
+    return jsonify({"imported": True})
+
+@app.route("/local_pdf/<path:filename>")
+def local_pdf(filename):
+    return send_from_directory(os.path.abspath(FAVOURITES_DIR), filename)
+
+# ── end PDF scanning ─────────────────────────────────────────────────────────
 
 @app.route("/doi", methods=['POST'])
 def doi():

@@ -223,6 +223,63 @@ $(document).ready(function() {
         }
     });
 
+    // Scan favourites folder for unimported PDFs
+    $(document).on('click', '#scan-folder-btn', function() {
+        var $btn = $(this);
+        var $box = $('#scan-results');
+        var $inner = $('#scan-results-inner');
+        $btn.html('<span class="spinner-inline"></span>');
+        $btn.prop('disabled', true);
+        $.get('/scan_favourites', function(results) {
+            $btn.text('scan folder').prop('disabled', false);
+            $inner.empty();
+            if (!results.length) {
+                $inner.html('<span style="font-size:0.85rem;opacity:0.6;">No new PDFs found in the favourites folder.</span>');
+                $box.show();
+                return;
+            }
+            var sourceLabel = {
+                'filename': 'filename', 'pdf_metadata': 'pdf metadata',
+                'xmp': 'XMP metadata', 'page_text': 'page text',
+                'unresolved': 'unresolved'
+            };
+            results.forEach(function(p) {
+                var $row = $('<div>').css({'margin-bottom':'10px','padding-bottom':'10px','border-bottom':'1px solid var(--c-border)'});
+                var src = '<span style="font-size:0.75rem;opacity:0.5;margin-left:6px;">detected via ' + (sourceLabel[p.detection_source] || p.detection_source) + '</span>';
+                if (p.unresolved) {
+                    $row.append('<div style="font-size:0.85rem;opacity:0.7;">' + p.filename + src + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.5;">Could not resolve metadata.</div>');
+                } else {
+                    var titleHtml = p.abs_url
+                        ? '<a href="' + p.abs_url + '" target="_blank" style="color:var(--c-secondary);font-size:0.95rem;">' + p.title + '</a>'
+                        : '<span style="font-size:0.95rem;">' + p.title + '</span>';
+                    $row.append('<div>' + titleHtml + src + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.7;margin:2px 0;">' + p.authors + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.5;margin-bottom:4px;">' + p.date + (p.category ? ' · ' + p.category : '') + ' · <em>' + p.filename + '</em></div>');
+                    var $add = $('<button>').addClass('tools tools-box').text('add to favourites').css('font-size','0.8rem');
+                    $add.on('click', function() {
+                        $add.text('adding...').prop('disabled', true);
+                        $.ajax({
+                            type: 'POST', url: '/import_local_paper',
+                            contentType: 'application/json',
+                            data: JSON.stringify(p),
+                            success: function() {
+                                $row.html('<span style="font-size:0.85rem;opacity:0.6;">✓ added: ' + p.title + '</span>');
+                            },
+                            error: function() { $add.text('add to favourites').prop('disabled', false); }
+                        });
+                    });
+                    $row.append($add);
+                }
+                $inner.append($row);
+            });
+            $box.show();
+        }).fail(function() {
+            $btn.text('scan folder').prop('disabled', false);
+            alert('Scan failed.');
+        });
+    });
+
     $('#new-config-btn').on('click', function() {
         $('#new-config-form').toggle();
     });

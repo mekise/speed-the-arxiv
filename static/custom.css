@@ -170,6 +170,11 @@ mjx-container:not([display="true"]) {
     color: var(--c-hover);
 }
 
+.fav-btn .star-empty { display: inline; }
+.fav-btn .star-filled { display: none; }
+.fav-btn.fav-active .star-empty { display: none; }
+.fav-btn.fav-active .star-filled { display: inline; color: #f5c518; }
+
 .collapsible {
     background-color: transparent;
     color: var(--c-primary);
@@ -457,6 +462,44 @@ input[type=text] {
     border: none;
     padding: 2px 4px;
     text-decoration: underline;
+}
+
+.abstract-notes-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.abstract-notes-wrapper .abstract-panel,
+.abstract-notes-wrapper .notes-panel {
+    flex: 1;
+    min-width: 0;
+}
+
+.notes-textarea {
+    width: 100%;
+    min-height: 160px;
+    background: transparent;
+    color: var(--c-primary);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 0.9rem;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.notes-textarea:focus {
+    outline: none;
+    border-color: var(--c-highlight);
+}
+
+.notes-rendered {
+    min-height: 160px;
+    padding: 8px;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .alert-msg {

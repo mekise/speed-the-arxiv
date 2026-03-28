@@ -19,6 +19,22 @@ app_port = 8080
 app = Flask(__name__)
 CACHE_DIR = './cache'
 os.makedirs(CACHE_DIR, exist_ok=True)
+FAVOURITES_FILE = './favourites.json'
+NOTES_DIR = './notes'
+os.makedirs(NOTES_DIR, exist_ok=True)
+
+def load_favourites():
+    if os.path.exists(FAVOURITES_FILE):
+        try:
+            with open(FAVOURITES_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
+
+def save_favourites(favs):
+    with open(FAVOURITES_FILE, 'w') as f:
+        json.dump(favs, f, indent=2)
 
 @app.route("/")
 def index():
@@ -27,6 +43,94 @@ def index():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+@app.route("/favourites", methods=['GET'])
+def favourites():
+    papers = load_favourites()
+    return render_template("favourites.html", papers=papers)
+
+@app.route("/toggle_favourite", methods=['POST'])
+def toggle_favourite():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    favs = load_favourites()
+    existing = next((f for f in favs if f['arxiv_id'] == arxiv_id), None)
+    if existing:
+        favs = [f for f in favs if f['arxiv_id'] != arxiv_id]
+        is_fav = False
+    else:
+        favs.append({
+            'arxiv_id': arxiv_id,
+            'title': data.get('title', ''),
+            'authors': data.get('authors', ''),
+            'date': data.get('date', ''),
+            'abs_url': data.get('abs_url', ''),
+            'pdf_url': data.get('pdf_url', ''),
+            'bibtex': data.get('bibtex', ''),
+            'category': data.get('category', ''),
+            'summary': data.get('summary', ''),
+            'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+        })
+        is_fav = True
+    save_favourites(favs)
+    return jsonify({"is_fav": is_fav})
+
+@app.route("/get_note/<arxiv_id>", methods=['GET'])
+def get_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    content = ''
+    if os.path.exists(note_path):
+        with open(note_path, 'r') as f:
+            content = f.read()
+    return jsonify({"content": content})
+
+@app.route("/has_note/<arxiv_id>", methods=['GET'])
+def has_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    return jsonify({"has_note": os.path.exists(note_path)})
+
+@app.route("/delete_note/<arxiv_id>", methods=['POST'])
+def delete_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    if os.path.exists(note_path):
+        os.remove(note_path)
+    return jsonify({"deleted": True})
+
+@app.route("/save_note", methods=['POST'])
+def save_note():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id or '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    with open(note_path, 'w') as f:
+        f.write(data.get('content', ''))
+    favs = load_favourites()
+    auto_starred = False
+    if not any(f['arxiv_id'] == arxiv_id for f in favs):
+        favs.append({
+            'arxiv_id': arxiv_id,
+            'title': data.get('title', ''),
+            'authors': data.get('authors', ''),
+            'date': data.get('date', ''),
+            'abs_url': data.get('abs_url', ''),
+            'pdf_url': data.get('pdf_url', ''),
+            'bibtex': data.get('bibtex', ''),
+            'category': data.get('category', ''),
+            'summary': data.get('summary', ''),
+            'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+        })
+        save_favourites(favs)
+        auto_starred = True
+    return jsonify({"saved": True, "auto_starred": auto_starred})
 
 @app.route("/doi", methods=['POST'])
 def doi():
@@ -159,6 +263,7 @@ def arxiv_search():
             'sortorder': sortorder,
         }
 
+        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         template_args = dict(
             papers=papers,
             keyauthors=[],
@@ -170,6 +275,7 @@ def arxiv_search():
             cache_stale=False,
             config_changed=False,
             adhoc_search=adhoc_params,
+            favourite_ids=fav_ids,
         )
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render_template("search_content.html", **template_args)
@@ -314,13 +420,15 @@ def render_search(config, papers, fetched_at, config_changed=False):
             cache_stale = (dt.datetime.now() - fetched).total_seconds() > 86400
         except (ValueError, TypeError):
             pass
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     template_args = dict(papers=papers,
         keyauthors=[keyauthor for keyauthor in config["keyauthors"]],
         keywords=[keyword for keyword in config["keywords"]],
         sections=[section for section in config["sections"]],
         search_name=config['name'], run_scirate=config['run_scirate'],
         fetched_at=fetched_at, cache_stale=cache_stale,
-        config_changed=config_changed, adhoc_search=None)
+        config_changed=config_changed, adhoc_search=None,
+        favourite_ids=fav_ids)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template("search_content.html", **template_args)
     return render_template("search.html", **template_args)
@@ -428,6 +536,7 @@ def _build_paper_dict(entry, checkdate, scirate):
               f"\tarchivePrefix={{arXiv}},\n"
               f"\tprimaryClass={{{primary_cat}}}\n}}")
     return {
+        "arxiv_id": arxiv_id_clean,
         "title": entry.title,
         "authors": ", ".join(author.name for author in entry.authors),
         "summary": entry.summary,

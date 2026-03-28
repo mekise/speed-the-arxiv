@@ -85,6 +85,144 @@ $(document).ready(function() {
         });
     });
 
+    // Notes panel: auto-show abstract and load content on open
+    $(document).on('show.bs.collapse', '.notes-panel', function() {
+        var $panel = $(this);
+        var arxivId = $panel.attr('data-arxiv-id');
+        if (!$panel.data('notes-loaded')) {
+            $.getJSON('/get_note/' + arxivId, function(res) {
+                $panel.find('.notes-textarea').val(res.content || '');
+            });
+            $panel.data('notes-loaded', true);
+        }
+    });
+
+    // Render / edit toggle for notes
+    $(document).on('click', '.render-note-btn', function() {
+        var $btn = $(this);
+        var $panel = $btn.closest('.notes-panel');
+        var $textarea = $panel.find('.notes-textarea');
+        var $rendered = $panel.find('.notes-rendered');
+        if ($btn.text() === 'render') {
+            $rendered[0].textContent = $textarea.val();
+            $textarea.hide();
+            $rendered.show();
+            $btn.text('edit');
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetClear([$rendered[0]]);
+                MathJax.typesetPromise([$rendered[0]]);
+            }
+        } else {
+            $rendered.hide();
+            $textarea.show();
+            $btn.text('render');
+        }
+    });
+
+    // Copy note
+    $(document).on('click', '.copy-note-btn', function() {
+        var $btn = $(this);
+        var text = $btn.closest('.notes-panel').find('.notes-textarea').val();
+        navigator.clipboard.writeText(text).then(function() {
+            var orig = $btn.text();
+            $btn.text('copied!');
+            setTimeout(function() { $btn.text(orig); }, 1500);
+        });
+    });
+
+    // Delete note
+    $(document).on('click', '.delete-note-btn', function() {
+        if (!confirm('Delete this note permanently?')) return;
+        var $btn = $(this);
+        var arxivId = $btn.attr('data-arxiv-id');
+        $.ajax({
+            type: 'POST',
+            url: '/delete_note/' + arxivId,
+            success: function() {
+                var $panel = $btn.closest('.notes-panel');
+                $panel.find('.notes-textarea').val('').show();
+                $panel.find('.notes-rendered').hide();
+                $panel.find('.render-note-btn').text('render');
+                $panel.removeData('notes-loaded');
+            },
+            error: function() { alert('Could not delete note.'); }
+        });
+    });
+
+    // Save note
+    $(document).on('click', '.save-note-btn', function() {
+        var $btn = $(this);
+        var $panel = $btn.closest('.notes-panel');
+        var $msg = $panel.find('.note-saved-msg');
+        $.ajax({
+            type: 'POST',
+            url: '/save_note',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                arxiv_id: $btn.attr('data-arxiv-id'),
+                content: $panel.find('.notes-textarea').val(),
+                title: $btn.data('title'),
+                authors: $btn.data('authors'),
+                date: $btn.data('date'),
+                abs_url: $btn.data('abs-url'),
+                pdf_url: $btn.data('pdf-url'),
+                bibtex: $btn.data('bibtex'),
+                category: $btn.data('category'),
+                summary: $btn.data('summary'),
+            }),
+            success: function(res) {
+                $msg.stop(true).show().delay(2000).fadeOut(400);
+                if (res.auto_starred) {
+                    $btn.closest('.paper-wrapper').find('.fav-btn').addClass('fav-active').attr('title', 'Remove from favourites');
+                }
+            },
+            error: function() { alert('Could not save note.'); }
+        });
+    });
+
+    // Star button: toggle favourite (with notes protection)
+    $(document).on('click', '.fav-btn', function() {
+        var $btn = $(this);
+        var isCurrentlyFav = $btn.hasClass('fav-active');
+        var arxivId = $btn.attr('data-arxiv-id');
+
+        function doToggle() {
+            $.ajax({
+                type: 'POST',
+                url: '/toggle_favourite',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    arxiv_id: arxivId,
+                    title: $btn.data('title'),
+                    authors: $btn.data('authors'),
+                    date: $btn.data('date'),
+                    abs_url: $btn.data('abs-url'),
+                    pdf_url: $btn.data('pdf-url'),
+                    bibtex: $btn.data('bibtex'),
+                    category: $btn.data('category'),
+                    summary: $btn.data('summary'),
+                }),
+                success: function(res) {
+                    $btn.toggleClass('fav-active', res.is_fav);
+                    $btn.attr('title', res.is_fav ? 'Remove from favourites' : 'Add to favourites');
+                    if (!res.is_fav && $btn.closest('.fav-page').length) {
+                        $btn.closest('.paper-wrapper').fadeOut(300, function() { $(this).remove(); });
+                    }
+                },
+                error: function() { alert('Could not update favourites.'); }
+            });
+        }
+
+        if (isCurrentlyFav) {
+            $.getJSON('/has_note/' + arxivId, function(data) {
+                if (data.has_note && !confirm('This paper has notes. Remove from favourites anyway?')) return;
+                doToggle();
+            }).fail(function() { doToggle(); });
+        } else {
+            doToggle();
+        }
+    });
+
     $('#new-config-btn').on('click', function() {
         $('#new-config-form').toggle();
     });

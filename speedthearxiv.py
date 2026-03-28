@@ -4,6 +4,8 @@ import platform
 import subprocess
 import yaml
 import requests
+
+ARXIV_HEADERS = {'User-Agent': 'speed-the-arxiv/1.0 (https://github.com/mekise/speed-the-arxiv)'}
 import feedparser
 import asyncio
 import aiohttp
@@ -103,7 +105,7 @@ def arxiv_search():
         return _render_index(error="Please enter a search query")
 
     # Build arxiv API search query
-    allowed_fields = {'all', 'ti', 'au', 'abs', 'cat', 'co', 'jr'}
+    allowed_fields = {'all', 'ti', 'au', 'abs', 'cat', 'co', 'jr', 'id'}
     if field not in allowed_fields:
         field = 'all'
     if max_results < 1:
@@ -112,11 +114,14 @@ def arxiv_search():
         max_results = 500
 
     # URL-encode the query
-    encoded_query = f"{field}:{query_text}".replace(" ", "%20")
-    url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
+    if field == 'id':
+        url = f"https://export.arxiv.org/api/query?id_list={query_text.replace(' ', ',')}&start=0&max_results={max_results}"
+    else:
+        encoded_query = f"{field}:{query_text}".replace(" ", "%20")
+        url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
 
     try:
-        response = requests.get(url, timeout=120)
+        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -125,6 +130,11 @@ def arxiv_search():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "Could not reach arXiv API."}), 502
         return _render_index(error="Could not reach arXiv API.")
+
+    if response.status_code == 429:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "arXiv API rate limit reached. Please wait a moment and try again."}), 429
+        return _render_index(error="arXiv API rate limit reached. Please wait a moment and try again.")
 
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
@@ -253,7 +263,7 @@ def do_fetch_and_render(config):
     query = query.replace(" ", "%20")
     url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={config['max_results']}&sortBy={config['arxiv_sortby']}&sortOrder={config['arxiv_sortorder']}"
     try:
-        response = requests.get(url, timeout=120)
+        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -261,6 +271,10 @@ def do_fetch_and_render(config):
     except requests.exceptions.RequestException:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "Could not reach arXiv API."}), 502
+        return render_search(config, [], None)
+    if response.status_code == 429:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "arXiv API rate limit reached. Please wait a moment and try again."}), 429
         return render_search(config, [], None)
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)

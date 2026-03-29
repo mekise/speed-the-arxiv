@@ -85,6 +85,325 @@ $(document).ready(function() {
         });
     });
 
+    // Notes panel: auto-show abstract and load content on open
+    $(document).on('show.bs.collapse', '.notes-panel', function() {
+        var $panel = $(this);
+        var arxivId = $panel.attr('data-arxiv-id');
+        if (!$panel.data('notes-loaded')) {
+            $.getJSON('/get_note/' + arxivId, function(res) {
+                $panel.find('.notes-textarea').val(res.content || '');
+            });
+            $panel.data('notes-loaded', true);
+        }
+    });
+
+    // Render / edit toggle for notes
+    $(document).on('click', '.render-note-btn', function() {
+        var $btn = $(this);
+        var $panel = $btn.closest('.notes-panel');
+        var $textarea = $panel.find('.notes-textarea');
+        var $rendered = $panel.find('.notes-rendered');
+        if ($btn.text() === 'render') {
+            $rendered[0].textContent = $textarea.val();
+            $textarea.hide();
+            $rendered.show();
+            $btn.text('edit');
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetClear([$rendered[0]]);
+                MathJax.typesetPromise([$rendered[0]]);
+            }
+        } else {
+            $rendered.hide();
+            $textarea.show();
+            $btn.text('render');
+        }
+    });
+
+    // Copy note
+    $(document).on('click', '.copy-note-btn', function() {
+        var $btn = $(this);
+        var text = $btn.closest('.notes-panel').find('.notes-textarea').val();
+        navigator.clipboard.writeText(text).then(function() {
+            var orig = $btn.text();
+            $btn.text('copied!');
+            setTimeout(function() { $btn.text(orig); }, 1500);
+        });
+    });
+
+    // Delete note
+    $(document).on('click', '.delete-note-btn', function() {
+        if (!confirm('Delete this note permanently?')) return;
+        var $btn = $(this);
+        var arxivId = $btn.attr('data-arxiv-id');
+        $.ajax({
+            type: 'POST',
+            url: '/delete_note/' + arxivId,
+            success: function() {
+                var $panel = $btn.closest('.notes-panel');
+                $panel.find('.notes-textarea').val('').show();
+                $panel.find('.notes-rendered').hide();
+                $panel.find('.render-note-btn').text('render');
+                $panel.removeData('notes-loaded');
+            },
+            error: function() { alert('Could not delete note.'); }
+        });
+    });
+
+    // Save note
+    $(document).on('click', '.save-note-btn', function() {
+        var $btn = $(this);
+        var $panel = $btn.closest('.notes-panel');
+        var $msg = $panel.find('.note-saved-msg');
+        $.ajax({
+            type: 'POST',
+            url: '/save_note',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                arxiv_id: $btn.attr('data-arxiv-id'),
+                content: $panel.find('.notes-textarea').val(),
+                title: $btn.data('title'),
+                authors: $btn.data('authors'),
+                date: $btn.data('date'),
+                abs_url: $btn.data('abs-url'),
+                pdf_url: $btn.data('pdf-url'),
+                bibtex: $btn.data('bibtex'),
+                category: $btn.data('category'),
+                summary: $btn.data('summary'),
+            }),
+            success: function(res) {
+                $msg.stop(true).show().delay(2000).fadeOut(400);
+                if (res.auto_starred) {
+                    $btn.closest('.paper-wrapper').find('.fav-btn').addClass('fav-active').attr('title', 'Remove from favourites');
+                }
+            },
+            error: function() { alert('Could not save note.'); }
+        });
+    });
+
+    // Star button: toggle favourite (with notes protection)
+    $(document).on('click', '.fav-btn', function() {
+        var $btn = $(this);
+        var isCurrentlyFav = $btn.hasClass('fav-active');
+        var arxivId = $btn.attr('data-arxiv-id');
+
+        function doToggle() {
+            $.ajax({
+                type: 'POST',
+                url: '/toggle_favourite',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    arxiv_id: arxivId,
+                    title: $btn.data('title'),
+                    authors: $btn.data('authors'),
+                    date: $btn.data('date'),
+                    abs_url: $btn.data('abs-url'),
+                    pdf_url: $btn.data('pdf-url'),
+                    bibtex: $btn.data('bibtex'),
+                    category: $btn.data('category'),
+                    summary: $btn.data('summary'),
+                }),
+                success: function(res) {
+                    $btn.toggleClass('fav-active', res.is_fav);
+                    $btn.attr('title', res.is_fav ? 'Remove from favourites' : 'Add to favourites');
+                    if (!res.is_fav && $btn.closest('.fav-page').length) {
+                        $btn.closest('.paper-wrapper').fadeOut(300, function() { $(this).remove(); });
+                    }
+                },
+                error: function() { alert('Could not update favourites.'); }
+            });
+        }
+
+        if (isCurrentlyFav) {
+            $.getJSON('/has_note/' + arxivId, function(data) {
+                if (data.has_note && !confirm('This paper has notes. Remove from favourites anyway?')) return;
+                doToggle();
+            }).fail(function() { doToggle(); });
+        } else {
+            doToggle();
+        }
+    });
+
+    // Scan favourites folder for unimported PDFs
+    $(document).on('click', '#scan-folder-btn', function() {
+        var $btn = $(this);
+        var $box = $('#scan-results');
+        var $inner = $('#scan-results-inner');
+        $btn.html('<span class="spinner-inline"></span>');
+        $btn.prop('disabled', true);
+        $.get('/scan_favourites', function(results) {
+            $btn.text('scan folder').prop('disabled', false);
+            $inner.empty();
+            if (!results.length) {
+                $inner.html('<span style="font-size:0.85rem;opacity:0.6;">No new PDFs found in the favourites folder.</span>');
+                $box.show();
+                return;
+            }
+            var sourceLabel = {
+                'filename': 'filename', 'pdf_metadata': 'pdf metadata',
+                'xmp': 'XMP metadata', 'page_text': 'page text',
+                'unresolved': 'unresolved'
+            };
+            results.forEach(function(p) {
+                var $row = $('<div>').css({'margin-bottom':'10px','padding-bottom':'10px','border-bottom':'1px solid var(--c-border)'});
+                var src = '<span style="font-size:0.75rem;opacity:0.5;margin-left:6px;">detected via ' + (sourceLabel[p.detection_source] || p.detection_source) + '</span>';
+                if (p.unresolved) {
+                    $row.append('<div style="font-size:0.85rem;opacity:0.7;">' + p.filename + src + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.5;">Could not resolve metadata.</div>');
+                } else {
+                    var titleHtml = p.abs_url
+                        ? '<a href="' + p.abs_url + '" target="_blank" style="color:var(--c-secondary);font-size:0.95rem;">' + p.title + '</a>'
+                        : '<span style="font-size:0.95rem;">' + p.title + '</span>';
+                    $row.append('<div>' + titleHtml + src + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.7;margin:2px 0;">' + p.authors + '</div>');
+                    $row.append('<div style="font-size:0.8rem;opacity:0.5;margin-bottom:4px;">' + p.date + (p.category ? ' · ' + p.category : '') + ' · <em>' + p.filename + '</em></div>');
+                    var $add = $('<button>').addClass('tools tools-box').text('add to favourites').css('font-size','0.8rem');
+                    $add.on('click', function() {
+                        $add.text('adding...').prop('disabled', true);
+                        $.ajax({
+                            type: 'POST', url: '/import_local_paper',
+                            contentType: 'application/json',
+                            data: JSON.stringify(p),
+                            success: function() {
+                                $row.html('<span style="font-size:0.85rem;opacity:0.6;">✓ added: ' + p.title + '</span>');
+                            },
+                            error: function() { $add.text('add to favourites').prop('disabled', false); }
+                        });
+                    });
+                    $row.append($add);
+                }
+                $inner.append($row);
+            });
+            $box.show();
+        }).fail(function() {
+            $btn.text('scan folder').prop('disabled', false);
+            alert('Scan failed.');
+        });
+    });
+
+    // ── Export BibTeX ──────────────────────────────────────────────────────
+    $(document).on('click', '#export-bibtex-btn', function() {
+        var entries = [];
+        $('.paper-wrapper:visible').each(function() {
+            var bib = $(this).find('.copy-bibtex-btn').attr('data-bibtex');
+            if (bib) entries.push(bib.trim());
+        });
+        if (!entries.length) { alert('No visible papers with BibTeX.'); return; }
+        var name = prompt('Filename for the .bib file:', 'favourites');
+        if (!name || !name.trim()) return;
+        name = name.trim().replace(/\.bib$/i, '');
+        var blob = new Blob([entries.join('\n\n')], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var $a = $('<a>').attr({ href: url, download: name + '.bib' });
+        $('body').append($a);
+        $a[0].click();
+        $a.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    // ── Tag filtering ──────────────────────────────────────────────────────
+    var activeTags = [];
+
+    $(document).on('click', '.tag-filter-pill', function() {
+        var tag = $(this).data('tag');
+        var idx = activeTags.indexOf(tag);
+        if (idx === -1) {
+            activeTags.push(tag);
+            $(this).addClass('tag-filter-active');
+        } else {
+            activeTags.splice(idx, 1);
+            $(this).removeClass('tag-filter-active');
+        }
+        $('#tag-filter-clear').toggle(activeTags.length > 0);
+        applyTagFilter();
+    });
+
+    $(document).on('click', '#tag-filter-clear', function() {
+        activeTags = [];
+        $('.tag-filter-pill').removeClass('tag-filter-active');
+        $(this).hide();
+        applyTagFilter();
+    });
+
+    // Clicking a tag pill on a paper: remove if editing, otherwise filter
+    $(document).on('click', '.tag-pill-paper', function() {
+        var $pill = $(this);
+        if ($pill.hasClass('tag-pill-editable')) {
+            var $row = $pill.closest('.paper-tags-row');
+            $pill.remove();
+            _saveTagsForRow($row, $row.attr('data-arxiv-id'));
+        } else {
+            var tag = $pill.data('tag');
+            if (activeTags.indexOf(tag) === -1) {
+                activeTags.push(tag);
+                $('.tag-filter-pill[data-tag="' + tag + '"]').addClass('tag-filter-active');
+                $('#tag-filter-clear').show();
+                applyTagFilter();
+            }
+        }
+    });
+
+    function applyTagFilter() {
+        if (!activeTags.length) {
+            $('.paper-wrapper').show();
+            return;
+        }
+        $('.paper-wrapper').each(function() {
+            var paperTags = ($(this).attr('data-tags') || '').split(',').filter(Boolean);
+            var match = activeTags.every(function(t) {
+                return paperTags.indexOf(t.toLowerCase()) !== -1;
+            });
+            $(this).toggle(match);
+        });
+    }
+
+    // ── Tag editing ────────────────────────────────────────────────────────
+    $(document).on('click', '.tag-edit-btn', function() {
+        var $row = $(this).closest('.paper-tags-row');
+        var $area = $row.find('.tag-edit-area');
+        var isOpen = $area.is(':visible');
+        if (isOpen) {
+            $area.hide();
+            $row.find('.tag-pill-paper').removeClass('tag-pill-editable');
+            $(this).text('+tag');
+        } else {
+            // Show × on existing pills
+            $row.find('.tag-pill-paper').addClass('tag-pill-editable');
+            $area.show();
+            $area.find('.tag-input').val('').focus();
+            $(this).text('done');
+        }
+    });
+
+    // Add tag on Enter
+    $(document).on('keydown', '.tag-input', function(e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var val = $(this).val().trim().replace(/,/g, '');
+        if (!val) return;
+        var $row = $(this).closest('.paper-tags-row');
+        var arxivId = $row.attr('data-arxiv-id');
+        // Don't add duplicates
+        var existing = $row.find('.tag-pill-paper').map(function() { return $(this).data('tag').toLowerCase(); }).get();
+        if (existing.indexOf(val.toLowerCase()) !== -1) { $(this).val(''); return; }
+        var $pill = $('<span>').addClass('tag-pill tag-pill-paper tag-pill-editable').attr('data-tag', val).text(val);
+        $row.append($pill);
+        $(this).val('');
+        _saveTagsForRow($row, arxivId);
+    });
+
+    function _saveTagsForRow($row, arxivId) {
+        var tags = $row.find('.tag-pill-paper').map(function() { return $(this).data('tag'); }).get();
+        // Update data-tags on paper-wrapper
+        $row.closest('.paper-wrapper').attr('data-tags', tags.join(',').toLowerCase());
+        $.ajax({
+            type: 'POST',
+            url: '/update_tags',
+            contentType: 'application/json',
+            data: JSON.stringify({ arxiv_id: arxivId, tags: tags }),
+            error: function() { alert('Could not save tags.'); }
+        });
+    }
+
     $('#new-config-btn').on('click', function() {
         $('#new-config-form').toggle();
     });

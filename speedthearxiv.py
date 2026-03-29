@@ -1,15 +1,24 @@
 import os
+import re
 import json
 import platform
 import subprocess
 import yaml
 import requests
+
+try:
+    import fitz as _fitz
+    _PYMUPDF = True
+except ImportError:
+    _PYMUPDF = False
+
+ARXIV_HEADERS = {'User-Agent': 'speed-the-arxiv/1.0 (https://github.com/mekise/speed-the-arxiv)'}
 import feedparser
 import asyncio
 import aiohttp
 import webbrowser
 import datetime as dt
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
 from habanero import cn
 from bs4 import BeautifulSoup
 
@@ -17,6 +26,30 @@ app_port = 8080
 app = Flask(__name__)
 CACHE_DIR = './cache'
 os.makedirs(CACHE_DIR, exist_ok=True)
+FAVOURITES_DIR = './favourites'
+os.makedirs(FAVOURITES_DIR, exist_ok=True)
+FAVOURITES_FILE = os.path.join(FAVOURITES_DIR, 'favourites.json')
+NOTES_DIR = './notes'
+os.makedirs(NOTES_DIR, exist_ok=True)
+
+# Migrate legacy favourites.json to new location
+_legacy = './favourites.json'
+if os.path.exists(_legacy) and not os.path.exists(FAVOURITES_FILE):
+    import shutil
+    shutil.move(_legacy, FAVOURITES_FILE)
+
+def load_favourites():
+    if os.path.exists(FAVOURITES_FILE):
+        try:
+            with open(FAVOURITES_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
+
+def save_favourites(favs):
+    with open(FAVOURITES_FILE, 'w') as f:
+        json.dump(favs, f, indent=2)
 
 @app.route("/")
 def index():
@@ -25,6 +58,340 @@ def index():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+@app.route("/backup", methods=['GET'])
+def backup():
+    import zipfile, io
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for folder in (FAVOURITES_DIR, NOTES_DIR, './search'):
+            if not os.path.isdir(folder):
+                continue
+            for root, _dirs, files in os.walk(folder):
+                for fname in files:
+                    fpath = os.path.join(root, fname)
+                    arcname = os.path.relpath(fpath, '.')
+                    zf.write(fpath, arcname)
+    buf.seek(0)
+    timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+    return send_file(buf, mimetype='application/zip',
+                     as_attachment=True,
+                     download_name=f'speed-the-arxiv-backup_{timestamp}.zip')
+
+@app.route("/favourites", methods=['GET'])
+def favourites():
+    papers = load_favourites()
+    for p in papers:
+        p.setdefault('tags', [])
+    all_tags = sorted({t for p in papers for t in p.get('tags', [])})
+    return render_template("favourites.html", papers=papers, all_tags=all_tags)
+
+@app.route("/update_tags", methods=['POST'])
+def update_tags():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    tags = [t.strip() for t in data.get('tags', []) if t.strip()]
+    favs = load_favourites()
+    for f in favs:
+        if f['arxiv_id'] == arxiv_id:
+            f['tags'] = tags
+            save_favourites(favs)
+            return jsonify({"tags": tags})
+    return jsonify({"error": "Not found"}), 404
+
+@app.route("/toggle_favourite", methods=['POST'])
+def toggle_favourite():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    favs = load_favourites()
+    existing = next((f for f in favs if f['arxiv_id'] == arxiv_id), None)
+    if existing:
+        favs = [f for f in favs if f['arxiv_id'] != arxiv_id]
+        is_fav = False
+    else:
+        favs.append({
+            'arxiv_id': arxiv_id,
+            'title': data.get('title', ''),
+            'authors': data.get('authors', ''),
+            'date': data.get('date', ''),
+            'abs_url': data.get('abs_url', ''),
+            'pdf_url': data.get('pdf_url', ''),
+            'bibtex': data.get('bibtex', ''),
+            'category': data.get('category', ''),
+            'summary': data.get('summary', ''),
+            'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+        })
+        is_fav = True
+    save_favourites(favs)
+    return jsonify({"is_fav": is_fav})
+
+@app.route("/get_note/<arxiv_id>", methods=['GET'])
+def get_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    content = ''
+    if os.path.exists(note_path):
+        with open(note_path, 'r') as f:
+            content = f.read()
+    return jsonify({"content": content})
+
+@app.route("/has_note/<arxiv_id>", methods=['GET'])
+def has_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    return jsonify({"has_note": os.path.exists(note_path)})
+
+@app.route("/delete_note/<arxiv_id>", methods=['POST'])
+def delete_note(arxiv_id):
+    if '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    if os.path.exists(note_path):
+        os.remove(note_path)
+    return jsonify({"deleted": True})
+
+@app.route("/save_note", methods=['POST'])
+def save_note():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id or '/' in arxiv_id or '\\' in arxiv_id or '..' in arxiv_id:
+        return jsonify({"error": "Invalid arxiv_id"}), 400
+    note_path = os.path.join(NOTES_DIR, arxiv_id + '.md')
+    with open(note_path, 'w') as f:
+        f.write(data.get('content', ''))
+    favs = load_favourites()
+    auto_starred = False
+    if not any(f['arxiv_id'] == arxiv_id for f in favs):
+        favs.append({
+            'arxiv_id': arxiv_id,
+            'title': data.get('title', ''),
+            'authors': data.get('authors', ''),
+            'date': data.get('date', ''),
+            'abs_url': data.get('abs_url', ''),
+            'pdf_url': data.get('pdf_url', ''),
+            'bibtex': data.get('bibtex', ''),
+            'category': data.get('category', ''),
+            'summary': data.get('summary', ''),
+            'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+        })
+        save_favourites(favs)
+        auto_starred = True
+    return jsonify({"saved": True, "auto_starred": auto_starred})
+
+# ── PDF scanning helpers ────────────────────────────────────────────────────
+
+# Labeled arXiv ID: "arXiv:2301.12345" or DOI form "10.48550/arXiv.2301.12345"
+_ARXIV_LABELED = re.compile(
+    r'(?:arXiv[:\s]+(\d{4}\.\d{4,5})(?:v\d+)?'
+    r'|10\.48550/arXiv\.(\d{4}\.\d{4,5}))',
+    re.IGNORECASE
+)
+# Generic DOI
+_DOI_RE = re.compile(r'\b(10\.\d{4,9}/[^\s\]},;\"\'<>\[\)]+)', re.IGNORECASE)
+
+
+def _find_ids(text):
+    """Return (arxiv_id, doi) from text. arXiv ID takes precedence."""
+    for m in _ARXIV_LABELED.finditer(text):
+        aid = m.group(1) or m.group(2)
+        return aid, None
+    m = _DOI_RE.search(text)
+    return None, m.group(1).rstrip('.,') if m else None
+
+
+def _scan_pdf(path):
+    """
+    Extract arXiv ID or DOI from a PDF using a layered strategy:
+      1. filename  2. PDF metadata  3. XMP metadata  4. first-page text
+    Returns {'arxiv_id', 'doi', 'source'}.
+    """
+    stem = os.path.splitext(os.path.basename(path))[0]
+
+    # 1. filename: covers all arXiv downloads (e.g. "2301.12345v2.pdf")
+    m = re.match(r'^(\d{4}\.\d{4,5})(?:v\d+)?$', stem)
+    if m:
+        return {'arxiv_id': m.group(1), 'doi': None, 'source': 'filename'}
+
+    if not _PYMUPDF:
+        return {'arxiv_id': None, 'doi': None, 'source': 'unresolved'}
+
+    fallback_doi = None
+    try:
+        doc = _fitz.open(path)
+
+        # 2. Standard PDF metadata fields
+        for val in (doc.metadata or {}).values():
+            if not val:
+                continue
+            aid, doi = _find_ids(val)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'pdf_metadata'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        # 3. XMP metadata (richer: dc:identifier, prism:doi, etc.)
+        xmp = doc.get_xml_metadata() or ''
+        if xmp:
+            aid, doi = _find_ids(xmp)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'xmp'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        # 4. First-page text (arXiv always stamps ID in header/footer)
+        if doc.page_count > 0:
+            text = doc[0].get_text()
+            aid, doi = _find_ids(text)
+            if aid:
+                doc.close()
+                return {'arxiv_id': aid, 'doi': None, 'source': 'page_text'}
+            if doi and not fallback_doi:
+                fallback_doi = doi
+
+        doc.close()
+    except Exception:
+        pass
+
+    src = 'page_text' if fallback_doi else 'unresolved'
+    return {'arxiv_id': None, 'doi': fallback_doi, 'source': src}
+
+
+def _fetch_arxiv_paper(arxiv_id):
+    url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1"
+    try:
+        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=30)
+        if resp.status_code == 200:
+            feeds = feedparser.parse(resp.text)
+            if feeds.entries:
+                return process_entry_adhoc(feeds.entries[0])
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_doi_paper(doi):
+    try:
+        resp = requests.get(
+            f"https://api.crossref.org/works/{requests.utils.quote(doi, safe='/')}",
+            headers={'User-Agent': ARXIV_HEADERS['User-Agent']}, timeout=30
+        )
+        if resp.status_code != 200:
+            return None
+        msg = resp.json().get('message', {})
+        title = (msg.get('title') or [''])[0]
+        authors = ', '.join(
+            ' '.join(filter(None, [a.get('given'), a.get('family')]))
+            for a in msg.get('author', [])
+        )
+        dp = ((msg.get('published') or msg.get('created') or {})
+              .get('date-parts', [[]])[0])
+        date = '-'.join(str(p).zfill(2) for p in dp[:3]) if dp else ''
+        try:
+            bibtex = format_bibtex_string(cn.content_negotiation(ids=doi, format="bibentry"))
+        except Exception:
+            bibtex = ''
+        safe_id = 'doi_' + re.sub(r'[^\w.-]', '_', doi)
+        return {
+            'arxiv_id': safe_id,
+            'title': title,
+            'authors': authors,
+            'date': date[:10],
+            'abs_url': f"https://doi.org/{doi}",
+            'pdf_url': f"https://doi.org/{doi}",
+            'category': msg.get('type', ''),
+            'summary': BeautifulSoup(msg.get('abstract') or '', 'html.parser').get_text().strip(),
+            'bibtex': bibtex,
+            'related_doi': doi,
+            'scirate': 0,
+        }
+    except Exception:
+        return None
+
+
+@app.route("/scan_favourites", methods=['GET'])
+def scan_favourites():
+    existing_ids = {f['arxiv_id'] for f in load_favourites()}
+    try:
+        pdf_files = sorted(f for f in os.listdir(FAVOURITES_DIR) if f.lower().endswith('.pdf'))
+    except OSError:
+        return jsonify([])
+
+    results = []
+    for pdf_file in pdf_files:
+        info = _scan_pdf(os.path.join(FAVOURITES_DIR, pdf_file))
+        arxiv_id = info['arxiv_id']
+        doi = info['doi']
+
+        # DOI that encodes an arXiv ID (10.48550/arXiv.XXXX.XXXXX)
+        if not arxiv_id and doi:
+            m = re.match(r'10\.48550/arXiv\.(\d{4}\.\d{4,5})', doi, re.IGNORECASE)
+            if m:
+                arxiv_id = m.group(1)
+                doi = None
+
+        if arxiv_id:
+            if arxiv_id in existing_ids:
+                continue
+            paper = _fetch_arxiv_paper(arxiv_id)
+        elif doi:
+            safe_id = 'doi_' + re.sub(r'[^\w.-]', '_', doi)
+            if safe_id in existing_ids:
+                continue
+            paper = _fetch_doi_paper(doi)
+        else:
+            paper = None
+
+        entry = paper or {
+            'arxiv_id': arxiv_id or doi or '',
+            'title': '', 'authors': '', 'date': '',
+            'abs_url': '', 'category': '', 'summary': '', 'bibtex': '',
+        }
+        entry['filename'] = pdf_file
+        entry['pdf_url'] = f"/local_pdf/{pdf_file}"
+        entry['detection_source'] = info['source']
+        entry['unresolved'] = paper is None
+        results.append(entry)
+
+    return jsonify(results)
+
+
+@app.route("/import_local_paper", methods=['POST'])
+def import_local_paper():
+    data = request.get_json()
+    arxiv_id = str(data.get('arxiv_id', '')).strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    favs = load_favourites()
+    if any(f['arxiv_id'] == arxiv_id for f in favs):
+        return jsonify({"imported": False, "reason": "already_exists"})
+    favs.append({
+        'arxiv_id': arxiv_id,
+        'title': data.get('title', ''),
+        'authors': data.get('authors', ''),
+        'date': data.get('date', ''),
+        'abs_url': data.get('abs_url', ''),
+        'pdf_url': data.get('pdf_url', ''),
+        'bibtex': data.get('bibtex', ''),
+        'category': data.get('category', ''),
+        'summary': data.get('summary', ''),
+        'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
+    })
+    save_favourites(favs)
+    return jsonify({"imported": True})
+
+@app.route("/local_pdf/<path:filename>")
+def local_pdf(filename):
+    return send_from_directory(os.path.abspath(FAVOURITES_DIR), filename)
+
+# ── end PDF scanning ─────────────────────────────────────────────────────────
 
 @app.route("/doi", methods=['POST'])
 def doi():
@@ -103,7 +470,7 @@ def arxiv_search():
         return _render_index(error="Please enter a search query")
 
     # Build arxiv API search query
-    allowed_fields = {'all', 'ti', 'au', 'abs', 'cat', 'co', 'jr'}
+    allowed_fields = {'all', 'ti', 'au', 'abs', 'cat', 'co', 'jr', 'id'}
     if field not in allowed_fields:
         field = 'all'
     if max_results < 1:
@@ -112,11 +479,14 @@ def arxiv_search():
         max_results = 500
 
     # URL-encode the query
-    encoded_query = f"{field}:{query_text}".replace(" ", "%20")
-    url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
+    if field == 'id':
+        url = f"https://export.arxiv.org/api/query?id_list={query_text.replace(' ', ',')}&start=0&max_results={max_results}"
+    else:
+        encoded_query = f"{field}:{query_text}".replace(" ", "%20")
+        url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
 
     try:
-        response = requests.get(url, timeout=120)
+        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -125,6 +495,11 @@ def arxiv_search():
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "Could not reach arXiv API."}), 502
         return _render_index(error="Could not reach arXiv API.")
+
+    if response.status_code == 429:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "arXiv API rate limit reached. Please wait a moment and try again."}), 429
+        return _render_index(error="arXiv API rate limit reached. Please wait a moment and try again.")
 
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
@@ -149,6 +524,7 @@ def arxiv_search():
             'sortorder': sortorder,
         }
 
+        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         template_args = dict(
             papers=papers,
             keyauthors=[],
@@ -160,6 +536,7 @@ def arxiv_search():
             cache_stale=False,
             config_changed=False,
             adhoc_search=adhoc_params,
+            favourite_ids=fav_ids,
         )
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render_template("search_content.html", **template_args)
@@ -253,7 +630,7 @@ def do_fetch_and_render(config):
     query = query.replace(" ", "%20")
     url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={config['max_results']}&sortBy={config['arxiv_sortby']}&sortOrder={config['arxiv_sortorder']}"
     try:
-        response = requests.get(url, timeout=120)
+        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -261,6 +638,10 @@ def do_fetch_and_render(config):
     except requests.exceptions.RequestException:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "Could not reach arXiv API."}), 502
+        return render_search(config, [], None)
+    if response.status_code == 429:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "arXiv API rate limit reached. Please wait a moment and try again."}), 429
         return render_search(config, [], None)
     if response.status_code == 200:
         feeds = feedparser.parse(response.text)
@@ -300,13 +681,15 @@ def render_search(config, papers, fetched_at, config_changed=False):
             cache_stale = (dt.datetime.now() - fetched).total_seconds() > 86400
         except (ValueError, TypeError):
             pass
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     template_args = dict(papers=papers,
         keyauthors=[keyauthor for keyauthor in config["keyauthors"]],
         keywords=[keyword for keyword in config["keywords"]],
         sections=[section for section in config["sections"]],
         search_name=config['name'], run_scirate=config['run_scirate'],
         fetched_at=fetched_at, cache_stale=cache_stale,
-        config_changed=config_changed, adhoc_search=None)
+        config_changed=config_changed, adhoc_search=None,
+        favourite_ids=fav_ids)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template("search_content.html", **template_args)
     return render_template("search.html", **template_args)
@@ -414,6 +797,7 @@ def _build_paper_dict(entry, checkdate, scirate):
               f"\tarchivePrefix={{arXiv}},\n"
               f"\tprimaryClass={{{primary_cat}}}\n}}")
     return {
+        "arxiv_id": arxiv_id_clean,
         "title": entry.title,
         "authors": ", ".join(author.name for author in entry.authors),
         "summary": entry.summary,

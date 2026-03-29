@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import platform
 import subprocess
 import yaml
@@ -13,6 +14,17 @@ except ImportError:
     _PYMUPDF = False
 
 ARXIV_HEADERS = {'User-Agent': 'speed-the-arxiv/1.0 (https://github.com/mekise/speed-the-arxiv)'}
+
+def _arxiv_get(url, timeout=120, retries=3):
+    """requests.get with automatic retry + backoff on 429 rate-limit responses."""
+    for attempt in range(retries):
+        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=timeout)
+        if resp.status_code != 429:
+            return resp
+        wait = int(resp.headers.get('Retry-After', (attempt + 1) * 3))
+        time.sleep(wait)
+    return resp
+
 import feedparser
 import asyncio
 import aiohttp
@@ -268,7 +280,7 @@ def _scan_pdf(path):
 def _fetch_arxiv_paper(arxiv_id):
     url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1"
     try:
-        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=30)
+        resp = _arxiv_get(url, timeout=30)
         if resp.status_code == 200:
             feeds = feedparser.parse(resp.text)
             if feeds.entries:
@@ -349,15 +361,41 @@ def scan_favourites():
 
         to_fetch.append((pdf_file, arxiv_id, doi, info))
 
-    # Phase 2: fetch metadata in parallel
-    from concurrent.futures import ThreadPoolExecutor
+    # Phase 2: batch arXiv lookups into a single API call
+    arxiv_items = [(pdf_file, arxiv_id, info) for pdf_file, arxiv_id, doi, info in to_fetch if arxiv_id]
+    doi_items = [(pdf_file, doi, info) for pdf_file, arxiv_id, doi, info in to_fetch if not arxiv_id and doi]
+    other_items = [(pdf_file, arxiv_id, doi, info) for pdf_file, arxiv_id, doi, info in to_fetch if not arxiv_id and not doi]
 
-    def _fetch_one(item):
-        pdf_file, arxiv_id, doi, info = item
+    arxiv_papers = {}
+    if arxiv_items:
+        ids = ','.join(aid for _, aid, _ in arxiv_items)
+        url = f"https://export.arxiv.org/api/query?id_list={ids}&max_results={len(arxiv_items)}"
+        try:
+            resp = _arxiv_get(url, timeout=30)
+            if resp.status_code == 200:
+                for entry in feedparser.parse(resp.text).entries:
+                    paper = process_entry_adhoc(entry)
+                    if paper:
+                        arxiv_papers[paper['arxiv_id']] = paper
+        except Exception:
+            pass
+
+    # Fetch DOI papers in parallel (Crossref, not arXiv — separate rate limit)
+    from concurrent.futures import ThreadPoolExecutor
+    doi_papers = {}
+    if doi_items:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            fetched = list(pool.map(lambda item: _fetch_doi_paper(item[1]), doi_items))
+            for item, paper in zip(doi_items, fetched):
+                if paper:
+                    doi_papers[item[1]] = paper
+
+    results = []
+    for pdf_file, arxiv_id, doi, info in to_fetch:
         if arxiv_id:
-            paper = _fetch_arxiv_paper(arxiv_id)
+            paper = arxiv_papers.get(arxiv_id)
         elif doi:
-            paper = _fetch_doi_paper(doi)
+            paper = doi_papers.get(doi)
         else:
             paper = None
         entry = paper or {
@@ -369,10 +407,7 @@ def scan_favourites():
         entry['pdf_url'] = f"/local_pdf/{pdf_file}"
         entry['detection_source'] = info['source']
         entry['unresolved'] = paper is None
-        return entry
-
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        results = list(pool.map(_fetch_one, to_fetch))
+        results.append(entry)
 
     return jsonify(results)
 
@@ -500,7 +535,7 @@ def arxiv_search():
         url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
 
     try:
-        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
+        response = _arxiv_get(url, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -644,7 +679,7 @@ def do_fetch_and_render(config):
     query = query.replace(" ", "%20")
     url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={config['max_results']}&sortBy={config['arxiv_sortby']}&sortOrder={config['arxiv_sortorder']}"
     try:
-        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
+        response = _arxiv_get(url, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504

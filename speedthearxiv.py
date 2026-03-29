@@ -18,7 +18,7 @@ import asyncio
 import aiohttp
 import webbrowser
 import datetime as dt
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
 from habanero import cn
 from bs4 import BeautifulSoup
 
@@ -58,6 +58,25 @@ def index():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+@app.route("/backup", methods=['GET'])
+def backup():
+    import zipfile, io
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for folder in (FAVOURITES_DIR, NOTES_DIR, './search'):
+            if not os.path.isdir(folder):
+                continue
+            for root, _dirs, files in os.walk(folder):
+                for fname in files:
+                    fpath = os.path.join(root, fname)
+                    arcname = os.path.relpath(fpath, '.')
+                    zf.write(fpath, arcname)
+    buf.seek(0)
+    timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+    return send_file(buf, mimetype='application/zip',
+                     as_attachment=True,
+                     download_name=f'speed-the-arxiv-backup_{timestamp}.zip')
 
 @app.route("/favourites", methods=['GET'])
 def favourites():

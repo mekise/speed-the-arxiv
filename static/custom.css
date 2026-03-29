@@ -507,6 +507,25 @@ input[type=text] {
     word-wrap: break-word;
 }
 
+#title-bar .dropdown-toggle::after {
+    display: none;
+}
+
+#title-bar .dropdown-menu {
+    background-color: var(--c-background);
+    border: 1px solid var(--c-border);
+}
+
+#title-bar .dropdown-item {
+    color: var(--c-primary) !important;
+}
+
+#title-bar .dropdown-item:hover,
+#title-bar .dropdown-item:focus {
+    background-color: var(--c-border);
+    color: var(--c-primary) !important;
+}
+
 .alert-msg {
     color: #e8a87c;
     font-size: 0.9rem;

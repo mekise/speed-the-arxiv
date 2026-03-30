@@ -18,7 +18,8 @@ import asyncio
 import aiohttp
 import webbrowser
 import datetime as dt
-from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
+from urllib.parse import urljoin
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file, redirect
 from habanero import cn
 from bs4 import BeautifulSoup
 
@@ -927,6 +928,248 @@ def _build_config_dict(data):
         }
     }
     
+# ── Layer the Arxiv ──────────────────────────────────────────────────────
+
+@app.route("/layer")
+@app.route("/layer/")
+def layer_home():
+    user_sections = set()
+    try:
+        for fname in os.listdir('./search'):
+            if fname.endswith('.yaml'):
+                with open(os.path.join('search', fname)) as f:
+                    cfg = yaml.safe_load(f)
+                for s in cfg.get('keys', {}).get('sections', []):
+                    user_sections.add(s)
+    except Exception:
+        pass
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
+    return render_template("layer.html", arxiv_path="", layer_page=None,
+                           favourite_ids=fav_ids,
+                           user_sections=sorted(user_sections))
+
+
+@app.route("/layer/<path:arxiv_path>")
+def layer_proxy(arxiv_path):
+    arxiv_url = f"https://arxiv.org/{arxiv_path}"
+    qs = request.query_string.decode()
+    if qs:
+        arxiv_url += "?" + qs
+    try:
+        resp = requests.get(arxiv_url, headers=ARXIV_HEADERS, timeout=30)
+    except Exception:
+        fav_ids = {f['arxiv_id'] for f in load_favourites()}
+        return render_template("layer.html", arxiv_path=arxiv_path,
+            layer_page={'error': 'Could not reach arxiv.org.'},
+            favourite_ids=fav_ids, user_sections=[])
+
+    ct = resp.headers.get('Content-Type', '')
+    if 'text/html' not in ct:
+        return redirect(arxiv_url)
+
+    if resp.status_code != 200:
+        fav_ids = {f['arxiv_id'] for f in load_favourites()}
+        return render_template("layer.html", arxiv_path=arxiv_path,
+            layer_page={'error': f'arxiv.org returned status {resp.status_code}.'},
+            favourite_ids=fav_ids, user_sections=[])
+
+    page = _process_layer_page(resp.text, arxiv_path)
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
+    return render_template("layer.html", arxiv_path=arxiv_path, layer_page=page,
+                           favourite_ids=fav_ids, user_sections=[])
+
+
+def _process_layer_page(html, arxiv_path):
+    """Parse an arxiv HTML page and return a dict with papers, heading, nav links, and info."""
+    soup = BeautifulSoup(html, 'html.parser')
+    body = soup.find('body')
+    if not body:
+        return {'papers': [], 'heading': '', 'nav_links': [], 'page_info': '',
+                'is_abstract': False}
+
+    base_url = f"https://arxiv.org/{arxiv_path}"
+
+    def rewrite_url(url):
+        if not url or url.startswith('#') or url.startswith('mailto:'):
+            return url
+        abs_url = urljoin(base_url, url)
+        if 'arxiv.org/' in abs_url:
+            return '/layer/' + abs_url.split('arxiv.org/', 1)[1]
+        return abs_url
+
+    # Extract heading
+    heading = ''
+    h1 = body.find('h1')
+    if h1:
+        heading = h1.get_text(strip=True)
+        # Clean "Title:" prefix on abstract pages
+        if heading.startswith('Title:'):
+            heading = ''
+
+    # Extract navigation links (section nav on listing pages)
+    nav_links = []
+    for ul in body.find_all('ul'):
+        links = ul.find_all('a', href=True)
+        if not links:
+            continue
+        is_section_nav = any(
+            '/list/' in (a.get('href') or '') for a in links
+        )
+        if is_section_nav and len(links) <= 10:
+            for a in links:
+                href = rewrite_url(a['href'])
+                nav_links.append({'text': a.get_text(strip=True), 'url': href})
+            break
+
+    # Also capture "See recent articles" / "See new articles" links
+    see_links = []
+    for a in body.find_all('a', href=True):
+        text = a.get_text(strip=True).lower()
+        if text in ('recent', 'new') and '/list/' in (a.get('href') or ''):
+            see_links.append({'text': text, 'url': rewrite_url(a['href'])})
+
+    # Extract page info text (listing summary)
+    page_info = ''
+    for tag in body.find_all(['h2', 'h3']):
+        text = tag.get_text(strip=True)
+        if 'showing' in text.lower() or 'listing' in text.lower():
+            page_info = text
+            break
+    # Also grab total count
+    for small in body.find_all(['small', 'span']):
+        text = small.get_text(strip=True)
+        if 'total of' in text.lower():
+            page_info = (page_info + '  -  ' + text) if page_info else text
+            break
+
+    # Extract papers
+    papers = _extract_layer_papers(body, arxiv_path)
+    is_abstract = arxiv_path.startswith('abs/')
+
+    return {
+        'papers': papers,
+        'heading': heading,
+        'nav_links': nav_links + see_links,
+        'page_info': page_info,
+        'is_abstract': is_abstract,
+    }
+
+
+def _layer_text(el, label=''):
+    """Extract text from a BS4 element, stripping a leading label."""
+    if el is None:
+        return ''
+    text = el.get_text(' ', strip=True)
+    if label and text.startswith(label):
+        text = text[len(label):].strip()
+    return text
+
+
+def _extract_layer_papers(body, arxiv_path):
+    papers = []
+    seen = set()
+
+    # Listing pages: dt/dd structure (/list/...)
+    for dt_tag in body.find_all('dt'):
+        a = dt_tag.find('a', href=re.compile(r'/abs/\d{4}\.\d{4,5}'))
+        if not a:
+            continue
+        m = re.search(r'(\d{4}\.\d{4,5})', a.get('href', ''))
+        if not m or m.group(1) in seen:
+            continue
+        aid = m.group(1)
+        seen.add(aid)
+        dd = dt_tag.find_next_sibling('dd')
+        title = _layer_text(dd.find('div', class_='list-title') if dd else None, 'Title:')
+        authors = _layer_text(dd.find('div', class_='list-authors') if dd else None, 'Authors:')
+        summary = _layer_text(dd.find('p', class_='mathjax') if dd else None)
+        cat_el = dd.find('div', class_='list-subjects') if dd else None
+        category = ''
+        if cat_el:
+            primary = cat_el.find('span', class_='primary-subject')
+            category = primary.get_text(strip=True) if primary else ''
+        papers.append(_make_layer_paper(aid, title, authors, summary, category))
+
+    # Abstract pages: /abs/XXXX.XXXXX
+    m_abs = re.match(r'abs/(\d{4}\.\d{4,5})', arxiv_path)
+    if m_abs and m_abs.group(1) not in seen:
+        aid = m_abs.group(1)
+        seen.add(aid)
+        title = _layer_text(body.find('h1', class_='title'), 'Title:')
+        authors = _layer_text(body.find('div', class_='authors'), 'Authors:')
+        summary = _layer_text(body.find('blockquote', class_='abstract'), 'Abstract:')
+        subj = body.find('td', class_='subjects')
+        category = ''
+        if subj:
+            primary = subj.find('span', class_='primary-subject')
+            category = primary.get_text(strip=True) if primary else ''
+        date = ''
+        dateline = body.find('div', class_='dateline')
+        if dateline:
+            dm = re.search(r'(\d{1,2}\s+\w{3}\s+\d{4})', dateline.get_text())
+            if dm:
+                try:
+                    date = dt.datetime.strptime(dm.group(1), '%d %b %Y').strftime('%Y-%m-%d')
+                except (ValueError, AttributeError):
+                    pass
+        papers.append(_make_layer_paper(aid, title, authors, summary, category, date))
+
+    # Search result pages: li.arxiv-result
+    for li in body.find_all('li', class_='arxiv-result'):
+        a = li.find('a', href=re.compile(r'/abs/\d{4}\.\d{4,5}'))
+        if not a:
+            continue
+        m = re.search(r'(\d{4}\.\d{4,5})', a.get('href', ''))
+        if not m or m.group(1) in seen:
+            continue
+        aid = m.group(1)
+        seen.add(aid)
+        title = _layer_text(li.find('p', class_='title'))
+        authors = _layer_text(li.find('p', class_='authors'), 'Authors:')
+        abs_el = li.find('span', class_='abstract-full') or li.find('span', class_='abstract-short')
+        summary = _layer_text(abs_el)
+        summary = re.sub(r'[△▽]\s*(Less|More)$', '', summary).strip()
+        tags_div = li.find('div', class_='tags')
+        category = ''
+        if tags_div:
+            first_tag = tags_div.find('span', class_='tag')
+            category = first_tag.get_text(strip=True) if first_tag else ''
+        papers.append(_make_layer_paper(aid, title, authors, summary, category))
+
+    return papers
+
+
+def _make_layer_paper(arxiv_id, title, authors, summary, category, date=''):
+    year = '20' + arxiv_id[:2]
+    first_author = 'unknown'
+    if authors:
+        parts = authors.split(',')[0].strip().split()
+        if parts:
+            first_author = re.sub(r'[^a-z]', '', parts[-1].lower()) or 'unknown'
+    primary_class = category.split('(')[0].strip() if category else ''
+    bibtex = (f"@article{{{first_author}{year}{arxiv_id},\n"
+              f"\ttitle={{{title}}},\n"
+              f"\tauthor={{{authors}}},\n"
+              f"\tyear={{{year}}},\n"
+              f"\teprint={{{arxiv_id}}},\n"
+              f"\tarchivePrefix={{arXiv}},\n"
+              f"\tprimaryClass={{{primary_class}}}\n}}")
+    return {
+        'arxiv_id': arxiv_id,
+        'title': title,
+        'authors': authors,
+        'summary': summary,
+        'category': category,
+        'date': date,
+        'abs_url': f'https://arxiv.org/abs/{arxiv_id}',
+        'pdf_url': f'https://arxiv.org/pdf/{arxiv_id}',
+        'bibtex': bibtex,
+        'scirate': 0,
+        'related_doi': '',
+    }
+
+# ── end Layer the Arxiv ─────────────────────────────────────────────────
+
 # if __name__ == "__main__":
 #     app.run(debug=True)
 

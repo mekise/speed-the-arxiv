@@ -1009,6 +1009,7 @@ def layer_home():
 
 @app.route("/layer/<path:arxiv_path>")
 def layer_proxy(arxiv_path):
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     arxiv_url = f"https://arxiv.org/{arxiv_path}"
     qs = request.query_string.decode()
     if qs:
@@ -1016,7 +1017,6 @@ def layer_proxy(arxiv_path):
     try:
         resp = requests.get(arxiv_url, headers=ARXIV_HEADERS, timeout=30)
     except Exception:
-        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         return render_template("layer.html", arxiv_path=arxiv_path,
             layer_page={'error': 'Could not reach arxiv.org.'},
             favourite_ids=fav_ids, user_sections=[])
@@ -1026,13 +1026,11 @@ def layer_proxy(arxiv_path):
         return redirect(arxiv_url)
 
     if resp.status_code != 200:
-        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         return render_template("layer.html", arxiv_path=arxiv_path,
             layer_page={'error': f'arxiv.org returned status {resp.status_code}.'},
             favourite_ids=fav_ids, user_sections=[])
 
     page = _process_layer_page(resp.text, arxiv_path)
-    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     return render_template("layer.html", arxiv_path=arxiv_path, layer_page=page,
                            favourite_ids=fav_ids, user_sections=[])
 

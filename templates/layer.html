@@ -1,0 +1,205 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="topmargin">
+    <div class="layer-nav-bar">
+        <a href="/" class="tools tools-box">home</a>
+        <a href="/layer" class="tools tools-box">layer home</a>
+        <form id="layer-go-form" style="display:inline-flex; align-items:center; gap:4px;">
+            <span style="font-size:0.85rem; opacity:0.7;">arxiv.org/</span>
+            <input type="text" id="layer-path-input" class="config-input"
+                   value="{{ arxiv_path }}" placeholder="list/quant-ph/new"
+                   style="width:300px;">
+            <button type="submit" class="tools tools-box">go</button>
+        </form>
+    </div>
+
+    {% if layer_page is none %}
+    {# ── Welcome page ─────────────────────────────────────────────── #}
+    <div class="layer-welcome">
+        <h4>layer-the-arxiv</h4>
+        <p>Browse arxiv.org with your speed-the-arxiv tools: favourites, notes, and BibTeX.</p>
+
+        {% if user_sections %}
+        <h5>Your sections</h5>
+        <div class="layer-links">
+            {% for sec in user_sections %}
+            <span>
+                <a href="/layer/list/{{ sec }}/new">{{ sec }}</a>
+                <span style="font-size:0.75rem;opacity:0.5;">
+                    (<a href="/layer/list/{{ sec }}/recent">recent</a>)
+                </span>
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <h5>Browse by section</h5>
+        <div class="layer-links">
+            <div>
+                <strong>Physics</strong><br>
+                <a href="/layer/list/quant-ph/new">quant-ph</a> &middot;
+                <a href="/layer/list/hep-th/new">hep-th</a> &middot;
+                <a href="/layer/list/hep-ph/new">hep-ph</a> &middot;
+                <a href="/layer/list/cond-mat/new">cond-mat</a> &middot;
+                <a href="/layer/list/astro-ph/new">astro-ph</a> &middot;
+                <a href="/layer/list/physics/new">physics</a>
+            </div>
+            <div>
+                <strong>Computer Science</strong><br>
+                <a href="/layer/list/cs.LG/new">cs.LG</a> &middot;
+                <a href="/layer/list/cs.AI/new">cs.AI</a> &middot;
+                <a href="/layer/list/cs.CV/new">cs.CV</a> &middot;
+                <a href="/layer/list/cs.CL/new">cs.CL</a> &middot;
+                <a href="/layer/list/cs.CR/new">cs.CR</a> &middot;
+                <a href="/layer/list/cs.DS/new">cs.DS</a>
+            </div>
+            <div>
+                <strong>Math &amp; Stats</strong><br>
+                <a href="/layer/list/math/new">math</a> &middot;
+                <a href="/layer/list/math.CO/new">math.CO</a> &middot;
+                <a href="/layer/list/math.AG/new">math.AG</a> &middot;
+                <a href="/layer/list/stat.ML/new">stat.ML</a>
+            </div>
+            <div>
+                <strong>Other</strong><br>
+                <a href="/layer/list/eess/new">eess</a> &middot;
+                <a href="/layer/list/q-bio/new">q-bio</a> &middot;
+                <a href="/layer/list/q-fin/new">q-fin</a> &middot;
+                <a href="/layer/list/econ/new">econ</a>
+            </div>
+        </div>
+    </div>
+
+    {% elif layer_page.error is defined %}
+    {# ── Error page ───────────────────────────────────────────────── #}
+    <p class="alert-msg">{{ layer_page.error }}</p>
+
+    {% elif layer_page.papers %}
+    {# ── Papers rendered in our template ──────────────────────────── #}
+
+    {% if layer_page.heading %}
+    <h3 style="margin-bottom:4px;">{{ layer_page.heading }}</h3>
+    {% endif %}
+
+    {% if layer_page.nav_links %}
+    <div style="margin-bottom:8px;">
+        {% for link in layer_page.nav_links %}
+        <a href="{{ link.url }}" class="tools tools-box" style="font-size:0.85rem;">{{ link.text }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if layer_page.page_info %}
+    <p style="font-size:0.85rem; opacity:0.6; margin-bottom:12px;">{{ layer_page.page_info }}</p>
+    {% endif %}
+
+    <div class="topmargin-papers">
+    {% for paper in layer_page.papers %}
+    <div class="paper-wrapper">
+    <div class="paper">
+        <h3 class="title"><a href="/layer/abs/{{ paper.arxiv_id }}" target="_blank">{{ paper.title }}</a></h3>
+        <p class="authors">{{ paper.authors }}</p>
+        <p class="authors">{{ paper.date }} {% if paper.date and paper.category %}-{% endif %} {{ paper.category }}
+            <a class="icons" href="{{ paper.pdf_url }}" target="_blank" title="Open PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16">
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                    <path d="M4.603 14.087a.8.8 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.7 7.7 0 0 1 1.482-.645 20 20 0 0 0 1.062-2.227 7.3 7.3 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a11 11 0 0 0 .98 1.686 5.8 5.8 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.86.86 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a6.1 6.1 0 0 1-.911-.95 11.7 11.7 0 0 0-1.997.406 11.3 11.3 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.8.8 0 0 1-.58.029m1.379-1.901q-.25.115-.459.238c-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.3.3 0 0 0 .152-.053c.18-.12.4-.36.639-.689zm-1.8-.515-.015.002a.2.2 0 0 0 .015-.002m4.834-4.56c.021-.199.03-.38.024-.541a1.6 1.6 0 0 0-.044-.29 .3.3 0 0 0-.107-.157.15.15 0 0 0-.12-.02c-.137.055-.185.195-.218.363-.04.2-.035.432.007.692.03.19.074.39.13.593z"/>
+                </svg>
+            </a>
+            <a class="icons" href="https://scirate.com/arxiv/{{ paper.arxiv_id }}" target="_blank" title="Scirate">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/>
+                </svg>
+            </a>
+            <button class="icons copy-bibtex-btn" title="Copy BibTeX" data-bibtex="{{ paper.bibtex|e }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                </svg>
+            </button>
+            <button class="icons fav-btn{% if paper.arxiv_id in favourite_ids %} fav-active{% endif %}"
+                title="{{ 'Remove from favourites' if paper.arxiv_id in favourite_ids else 'Add to favourites' }}"
+                data-arxiv-id="{{ paper.arxiv_id }}"
+                data-title="{{ paper.title|e }}"
+                data-authors="{{ paper.authors|e }}"
+                data-date="{{ paper.date }}"
+                data-abs-url="{{ paper.abs_url }}"
+                data-pdf-url="{{ paper.pdf_url }}"
+                data-bibtex="{{ paper.bibtex|e }}"
+                data-category="{{ paper.category|e }}"
+                data-summary="{{ paper.summary|e }}">
+                <svg class="star-empty" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.522-3.356c.33-.314.16-.888-.282-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767-3.686 1.894.694-3.957a.56.56 0 0 0-.163-.505L1.71 6.745l4.052-.576a.53.53 0 0 0 .393-.288L8 2.223l1.847 3.658a.53.53 0 0 0 .393.288l4.052.575-2.906 2.77a.56.56 0 0 0-.163.506l.694 3.957-3.686-1.894a.503.503 0 0 0-.461 0z"/>
+                </svg>
+                <svg class="star-filled" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.283.95l-3.523 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                </svg>
+            </button>
+        </p>
+        <p>
+            <button class="collapsible" type="button" aria-expanded="{{ 'true' if layer_page.is_abstract else 'false' }}" data-bs-toggle="collapse" data-bs-target="#layer-summary-{{ loop.index }}">
+                Abstract
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+            <button class="collapsible" type="button" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#layer-notes-{{ loop.index }}">
+                Notes
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </p>
+        <div class="abstract-notes-wrapper">
+            <div id="layer-summary-{{ loop.index }}" class="collapse{{ ' show' if layer_page.is_abstract else '' }} abstract-panel">
+                <div class="card card-body"><p style="margin-bottom:0">{{ paper.summary }}</p></div>
+            </div>
+            <div id="layer-notes-{{ loop.index }}" class="collapse notes-panel" data-arxiv-id="{{ paper.arxiv_id }}">
+                <div class="card card-body">
+                    <textarea class="notes-textarea" placeholder="Your notes..."></textarea>
+                    <div class="notes-rendered" style="display:none;"></div>
+                    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                        <button class="tools tools-box save-note-btn"
+                            data-arxiv-id="{{ paper.arxiv_id }}"
+                            data-title="{{ paper.title|e }}"
+                            data-authors="{{ paper.authors|e }}"
+                            data-date="{{ paper.date }}"
+                            data-abs-url="{{ paper.abs_url }}"
+                            data-pdf-url="{{ paper.pdf_url }}"
+                            data-bibtex="{{ paper.bibtex|e }}"
+                            data-category="{{ paper.category|e }}"
+                            data-summary="{{ paper.summary|e }}">save</button>
+                        <button class="tools tools-box copy-note-btn">copy all</button>
+                        <button class="tools tools-box render-note-btn">render</button>
+                        <button class="tools tools-box delete-note-btn" data-arxiv-id="{{ paper.arxiv_id }}">delete</button>
+                        <span class="note-saved-msg" style="display:none;font-size:0.8rem;opacity:0.6;">saved!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr style="background-color:gray; margin-bottom: 30px;">
+    </div>
+    {% endfor %}
+    </div>
+
+    {% else %}
+    {# ── No papers found on this page ─────────────────────────────── #}
+    <p style="font-size:0.9rem; opacity:0.6;">No papers detected on this page.
+        <a href="https://arxiv.org/{{ arxiv_path }}" target="_blank">Open on arxiv.org</a>
+    </p>
+    {% endif %}
+</div>
+
+<script>
+$(function() {
+    // Navigation bar
+    $('#layer-go-form').on('submit', function(e) {
+        e.preventDefault();
+        var path = $('#layer-path-input').val().trim();
+        if (path) window.location.href = '/layer/' + path;
+    });
+});
+</script>
+{% endblock %}

@@ -629,3 +629,35 @@ input[type=text] {
     margin: 0 !important;
     padding: 1px 5px !important;
 }
+
+/* ── Layer the Arxiv ──────────────────────────────────────────────────── */
+
+.layer-nav-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 16px;
+}
+
+.layer-welcome {
+    margin-top: 16px;
+}
+
+.layer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 12px 0;
+}
+
+.layer-paper-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+

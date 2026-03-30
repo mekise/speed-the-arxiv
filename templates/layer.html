@@ -98,7 +98,7 @@
     {% for paper in layer_page.papers %}
     <div class="paper-wrapper">
     <div class="paper">
-        <h3 class="title"><a href="/layer/abs/{{ paper.arxiv_id }}" target="_blank">{{ paper.title }}</a></h3>
+        <h3 class="title"><a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" target="_blank">{{ paper.title }}</a></h3>
         <p class="authors">{{ paper.authors }}</p>
         <p class="authors">{{ paper.date }} {% if paper.date and paper.category %}-{% endif %} {{ paper.category }}
             <a class="icons" href="{{ paper.pdf_url }}" target="_blank" title="Open PDF">

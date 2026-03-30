@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import platform
 import subprocess
 import yaml
@@ -13,6 +14,17 @@ except ImportError:
     _PYMUPDF = False
 
 ARXIV_HEADERS = {'User-Agent': 'speed-the-arxiv/1.0 (https://github.com/mekise/speed-the-arxiv)'}
+
+def _arxiv_get(url, timeout=120, retries=3):
+    """requests.get with automatic retry + backoff on 429 rate-limit responses."""
+    for attempt in range(retries):
+        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=timeout)
+        if resp.status_code != 429:
+            return resp
+        wait = int(resp.headers.get('Retry-After', (attempt + 1) * 3))
+        time.sleep(wait)
+    return resp
+
 import feedparser
 import asyncio
 import aiohttp
@@ -109,10 +121,12 @@ def toggle_favourite():
     if not arxiv_id:
         return jsonify({"error": "Missing arxiv_id"}), 400
     favs = load_favourites()
-    existing = next((f for f in favs if f['arxiv_id'] == arxiv_id), None)
-    if existing:
-        favs = [f for f in favs if f['arxiv_id'] != arxiv_id]
-        is_fav = False
+    is_fav = True
+    for i, f in enumerate(favs):
+        if f['arxiv_id'] == arxiv_id:
+            favs.pop(i)
+            is_fav = False
+            break
     else:
         favs.append({
             'arxiv_id': arxiv_id,
@@ -126,7 +140,6 @@ def toggle_favourite():
             'summary': data.get('summary', ''),
             'added_at': dt.datetime.now().strftime('%Y-%m-%d'),
         })
-        is_fav = True
     save_favourites(favs)
     return jsonify({"is_fav": is_fav})
 
@@ -268,7 +281,7 @@ def _scan_pdf(path):
 def _fetch_arxiv_paper(arxiv_id):
     url = f"https://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1"
     try:
-        resp = requests.get(url, headers=ARXIV_HEADERS, timeout=30)
+        resp = _arxiv_get(url, timeout=30)
         if resp.status_code == 200:
             feeds = feedparser.parse(resp.text)
             if feeds.entries:
@@ -325,7 +338,8 @@ def scan_favourites():
     except OSError:
         return jsonify([])
 
-    results = []
+    # Phase 1: scan PDFs locally (fast, CPU-only)
+    to_fetch = []  # (pdf_file, arxiv_id, doi, info)
     for pdf_file in pdf_files:
         info = _scan_pdf(os.path.join(FAVOURITES_DIR, pdf_file))
         arxiv_id = info['arxiv_id']
@@ -341,15 +355,50 @@ def scan_favourites():
         if arxiv_id:
             if arxiv_id in existing_ids:
                 continue
-            paper = _fetch_arxiv_paper(arxiv_id)
         elif doi:
             safe_id = 'doi_' + re.sub(r'[^\w.-]', '_', doi)
             if safe_id in existing_ids:
                 continue
-            paper = _fetch_doi_paper(doi)
+
+        to_fetch.append((pdf_file, arxiv_id, doi, info))
+
+    # Phase 2: batch arXiv lookups into a single API call
+    arxiv_items = [(pdf_file, arxiv_id, info) for pdf_file, arxiv_id, doi, info in to_fetch if arxiv_id]
+    doi_items = [(pdf_file, doi, info) for pdf_file, arxiv_id, doi, info in to_fetch if not arxiv_id and doi]
+    other_items = [(pdf_file, arxiv_id, doi, info) for pdf_file, arxiv_id, doi, info in to_fetch if not arxiv_id and not doi]
+
+    arxiv_papers = {}
+    if arxiv_items:
+        ids = ','.join(aid for _, aid, _ in arxiv_items)
+        url = f"https://export.arxiv.org/api/query?id_list={ids}&max_results={len(arxiv_items)}"
+        try:
+            resp = _arxiv_get(url, timeout=30)
+            if resp.status_code == 200:
+                for entry in feedparser.parse(resp.text).entries:
+                    paper = process_entry_adhoc(entry)
+                    if paper:
+                        arxiv_papers[paper['arxiv_id']] = paper
+        except Exception:
+            pass
+
+    # Fetch DOI papers in parallel (Crossref, not arXiv — separate rate limit)
+    from concurrent.futures import ThreadPoolExecutor
+    doi_papers = {}
+    if doi_items:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            fetched = list(pool.map(lambda item: _fetch_doi_paper(item[1]), doi_items))
+            for item, paper in zip(doi_items, fetched):
+                if paper:
+                    doi_papers[item[1]] = paper
+
+    results = []
+    for pdf_file, arxiv_id, doi, info in to_fetch:
+        if arxiv_id:
+            paper = arxiv_papers.get(arxiv_id)
+        elif doi:
+            paper = doi_papers.get(doi)
         else:
             paper = None
-
         entry = paper or {
             'arxiv_id': arxiv_id or doi or '',
             'title': '', 'authors': '', 'date': '',
@@ -426,13 +475,13 @@ def _render_index(**kwargs):
     searches = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
     searches.sort(key=lambda x: os.path.getmtime('./search/'+x+'.yaml'), reverse=True)
     search_list = [read_config(s) for s in searches]
+    now = dt.datetime.now()
     for item in search_list:
-        cached = load_cache(item['name'])
-        if cached and cached.get('fetched_at'):
+        fetched_at = load_cache_meta(item['name'])
+        if fetched_at:
             try:
-                fetched = dt.datetime.strptime(cached['fetched_at'], '%Y-%m-%d %H:%M:%S')
-                delta = dt.datetime.now() - fetched
-                total_min = int(delta.total_seconds() // 60)
+                fetched = dt.datetime.strptime(fetched_at, '%Y-%m-%d %H:%M:%S')
+                total_min = int((now - fetched).total_seconds() // 60)
                 if total_min < 60:
                     item['cache_age'] = f"{total_min}m ago"
                 elif total_min < 1440:
@@ -487,7 +536,7 @@ def arxiv_search():
         url = f"https://export.arxiv.org/api/query?search_query={encoded_query}&start=0&max_results={max_results}&sortBy={sortby}&sortOrder={sortorder}"
 
     try:
-        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
+        response = _arxiv_get(url, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -631,7 +680,7 @@ def do_fetch_and_render(config):
     query = query.replace(" ", "%20")
     url = f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={config['max_results']}&sortBy={config['arxiv_sortby']}&sortOrder={config['arxiv_sortorder']}"
     try:
-        response = requests.get(url, headers=ARXIV_HEADERS, timeout=120)
+        response = _arxiv_get(url, timeout=120)
     except requests.exceptions.Timeout:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({"error": "arXiv API timed out. Try again later."}), 504
@@ -651,21 +700,21 @@ def do_fetch_and_render(config):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({"error": "arXiv API returned an error. The query may be too complex. Try reducing max_results."}), 502
             return render_search(config, [], None)
-        arxiv_ids = [entry.id.split('/')[-1] for entry in feeds.entries]
         # First pass: filter by date, collect entries that survive
+        cutoff_date = dt.date.today() - dt.timedelta(days=config['past_days'])
         filtered = []
         for i, entry in enumerate(feeds.entries):
-            paper = process_entry(entry, config['past_days'], 0)
+            paper = process_entry(entry, cutoff_date, 0)
             if paper:
                 filtered.append((i, paper))
         # Fetch scirates only for surviving papers
         if config['run_scirate'] and filtered:
-            surviving_ids = [arxiv_ids[i] for i, _ in filtered]
+            surviving_ids = [feeds.entries[i].id.split('/')[-1] for i, _ in filtered]
             scirates = asyncio.run(get_scirates_async(surviving_ids))
             for idx, (_, paper) in enumerate(filtered):
                 paper['scirate'] = scirates[idx]
         papers = [paper for _, paper in filtered]
-        papers.sort(key=lambda x:tuple([x[ele] for ele in config['sortby']]), reverse=config['sortorder_rev'])
+        papers.sort(key=lambda x: tuple(x[k] for k in config['sortby']), reverse=config['sortorder_rev'])
         fetched_at = dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         save_cache(config['name'], papers, fetched_at, config)
         return render_search(config, papers, fetched_at)
@@ -684,9 +733,9 @@ def render_search(config, papers, fetched_at, config_changed=False):
             pass
     fav_ids = {f['arxiv_id'] for f in load_favourites()}
     template_args = dict(papers=papers,
-        keyauthors=[keyauthor for keyauthor in config["keyauthors"]],
-        keywords=[keyword for keyword in config["keywords"]],
-        sections=[section for section in config["sections"]],
+        keyauthors=config["keyauthors"],
+        keywords=config["keywords"],
+        sections=config["sections"],
         search_name=config['name'], run_scirate=config['run_scirate'],
         fetched_at=fetched_at, cache_stale=cache_stale,
         config_changed=config_changed, adhoc_search=None,
@@ -702,6 +751,21 @@ def load_cache(search_name):
             return json.load(f)
     return None
 
+_FETCHED_AT_RE = re.compile(r'"fetched_at":\s*"([^"]*)"')
+
+def load_cache_meta(search_name):
+    """Read only fetched_at and config from cache without deserializing papers."""
+    cache_path = os.path.join(CACHE_DIR, search_name + '.json')
+    if not os.path.exists(cache_path):
+        return None
+    with open(cache_path, 'r') as f:
+        # fetched_at and config are written before papers, so they appear
+        # in the first ~500 bytes. Read a small chunk to avoid parsing the
+        # entire (potentially large) papers list.
+        head = f.read(512)
+        m = _FETCHED_AT_RE.search(head)
+        return m.group(1) if m else None
+
 _SEARCH_CONFIG_KEYS = [
     'sections', 'keywords', 'keyauthors',
     'and_or_sections', 'and_or_keyauthors', 'and_or', 'and_or_keywords',
@@ -715,8 +779,9 @@ def _search_params(config):
 def save_cache(search_name, papers, fetched_at, config):
     cache_path = os.path.join(CACHE_DIR, search_name + '.json')
     with open(cache_path, 'w') as f:
-        json.dump({'papers': papers, 'fetched_at': fetched_at,
-                   'config': _search_params(config)}, f)
+        json.dump({'fetched_at': fetched_at,
+                   'config': _search_params(config),
+                   'papers': papers}, f)
 
 def read_config(name):
     with open('search/'+str(name)+'.yaml', 'r') as file:
@@ -761,10 +826,9 @@ async def get_scirates_async(arxiv_ids):
         tasks = [fetch_scirate(session, arxiv_id, semaphore) for arxiv_id in arxiv_ids]
         return await asyncio.gather(*tasks)
     
-def process_entry(entry, past_days, scirate):
+def process_entry(entry, cutoff_date, scirate):
     checkdate = entry.updated[0:10]
-    entry_date = dt.date.fromisoformat(checkdate)
-    if dt.date.today() - entry_date <= dt.timedelta(days=past_days):
+    if dt.date.fromisoformat(checkdate) >= cutoff_date:
         return _build_paper_dict(entry, checkdate, scirate)
     return None
 
@@ -783,15 +847,15 @@ def _build_paper_dict(entry, checkdate, scirate):
         category = primary_cat
     arxiv_id = entry.id.split('/abs/')[-1]
     arxiv_id_clean = arxiv_id.split('v')[0]
-    first_author = entry.authors[0].name.split()[-1].lower() if entry.authors else 'unknown'
+    author_names = [author.name for author in entry.authors]
+    first_author = author_names[0].split()[-1].lower() if author_names else 'unknown'
     year = checkdate[:4]
-    authors_bibtex = " and ".join(author.name for author in entry.authors)
     related_doi = entry.get('arxiv_doi', '')
     doi = related_doi or f"10.48550/arXiv.{arxiv_id_clean}"
     doi_line = f"\tdoi={{{doi}}},\n" if doi else ""
     bibtex = (f"@article{{{first_author}{year}{arxiv_id_clean},\n"
               f"\ttitle={{{entry.title}}},\n"
-              f"\tauthor={{{authors_bibtex}}},\n"
+              f"\tauthor={{{{" and ".join(author_names)}}}},\n"
               f"\tyear={{{year}}},\n"
               f"{doi_line}"
               f"\teprint={{{arxiv_id_clean}}},\n"
@@ -800,7 +864,7 @@ def _build_paper_dict(entry, checkdate, scirate):
     return {
         "arxiv_id": arxiv_id_clean,
         "title": entry.title,
-        "authors": ", ".join(author.name for author in entry.authors),
+        "authors": ", ".join(author_names),
         "summary": entry.summary,
         "date": checkdate,
         "category": category,
@@ -892,15 +956,9 @@ def get_config():
     if not os.path.exists(config_path):
         return jsonify({"error": "Config not found"}), 404
     config = read_config(name)
-    # Convert booleans to lowercase strings and format select values for the frontend
-    result = {}
-    for key, val in config.items():
-        if isinstance(val, bool):
-            result[key] = 'true' if val else 'false'
-        elif isinstance(val, list):
-            result[key] = val
-        else:
-            result[key] = val
+    # Convert booleans to lowercase strings for the frontend
+    result = {k: ('true' if v else 'false') if isinstance(v, bool) else v
+              for k, v in config.items()}
     return jsonify(result)
 
 def _build_config_dict(data):
@@ -951,6 +1009,7 @@ def layer_home():
 
 @app.route("/layer/<path:arxiv_path>")
 def layer_proxy(arxiv_path):
+    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     arxiv_url = f"https://arxiv.org/{arxiv_path}"
     qs = request.query_string.decode()
     if qs:
@@ -958,7 +1017,6 @@ def layer_proxy(arxiv_path):
     try:
         resp = requests.get(arxiv_url, headers=ARXIV_HEADERS, timeout=30)
     except Exception:
-        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         return render_template("layer.html", arxiv_path=arxiv_path,
             layer_page={'error': 'Could not reach arxiv.org.'},
             favourite_ids=fav_ids, user_sections=[])
@@ -968,13 +1026,11 @@ def layer_proxy(arxiv_path):
         return redirect(arxiv_url)
 
     if resp.status_code != 200:
-        fav_ids = {f['arxiv_id'] for f in load_favourites()}
         return render_template("layer.html", arxiv_path=arxiv_path,
             layer_page={'error': f'arxiv.org returned status {resp.status_code}.'},
             favourite_ids=fav_ids, user_sections=[])
 
     page = _process_layer_page(resp.text, arxiv_path)
-    fav_ids = {f['arxiv_id'] for f in load_favourites()}
     return render_template("layer.html", arxiv_path=arxiv_path, layer_page=page,
                            favourite_ids=fav_ids, user_sections=[])
 

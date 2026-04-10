@@ -162,12 +162,7 @@ function renderPaginationControls(totalPages, totalVisible) {
 })();
 
 (function() {
-    document.addEventListener('click', function(e) {
-        var el = e.target.closest('.sort-option');
-        if (!el) return;
-        e.preventDefault();
-        var sortKey = el.getAttribute('data-sort');
-        var order = el.getAttribute('data-order');
+    function sortPapers(sortKey, order) {
         var container = document.querySelector('.topmargin-papers');
         if (!container) return;
         var wrappers = Array.from(container.querySelectorAll('.paper-wrapper'));
@@ -198,6 +193,20 @@ function renderPaginationControls(totalPages, totalVisible) {
         if (pagination) container.appendChild(pagination);
         currentPage = 1;
         applyPagination();
+    }
+
+    document.addEventListener('click', function(e) {
+        var el = e.target.closest('.sort-option');
+        if (!el) return;
+        e.preventDefault();
+        sortPapers(el.getAttribute('data-sort'), el.getAttribute('data-order'));
         window.scrollTo(0, 0);
+    });
+
+    // Default sort: date added (newest) on favourites page
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.querySelector('.fav-page')) {
+            sortPapers('added-at', 'desc');
+        }
     });
 })();

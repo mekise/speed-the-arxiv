@@ -91,10 +91,27 @@ $(document).ready(function() {
         var arxivId = $panel.attr('data-arxiv-id');
         if (!$panel.data('notes-loaded')) {
             $.getJSON('/get_note/' + arxivId, function(res) {
-                $panel.find('.notes-textarea').val(res.content || '');
+                var content = res.content || '';
+                var $textarea = $panel.find('.notes-textarea');
+                $textarea.val(content);
+                $textarea.data('saved-content', content);
             });
             $panel.data('notes-loaded', true);
         }
+    });
+
+    // Track unsaved note changes
+    $(document).on('input', '.notes-textarea', function() {
+        $(this).data('dirty', $(this).val() !== $(this).data('saved-content'));
+    });
+
+    // Warn before leaving with unsaved notes
+    $(window).on('beforeunload', function() {
+        var hasUnsaved = false;
+        $('.notes-textarea').each(function() {
+            if ($(this).data('dirty')) { hasUnsaved = true; return false; }
+        });
+        if (hasUnsaved) return 'You have unsaved notes. Leave anyway?';
     });
 
     // Render / edit toggle for notes
@@ -140,7 +157,8 @@ $(document).ready(function() {
             url: '/delete_note/' + arxivId,
             success: function() {
                 var $panel = $btn.closest('.notes-panel');
-                $panel.find('.notes-textarea').val('').show();
+                var $textarea = $panel.find('.notes-textarea');
+                $textarea.val('').data('saved-content', '').data('dirty', false).show();
                 $panel.find('.notes-rendered').hide();
                 $panel.find('.render-note-btn').text('render');
                 $panel.removeData('notes-loaded');
@@ -171,6 +189,9 @@ $(document).ready(function() {
                 summary: $btn.data('summary'),
             }),
             success: function(res) {
+                var $textarea = $panel.find('.notes-textarea');
+                $textarea.data('saved-content', $textarea.val());
+                $textarea.data('dirty', false);
                 $msg.stop(true).show().delay(2000).fadeOut(400);
                 if (res.auto_starred) {
                     $btn.closest('.paper-wrapper').find('.fav-btn').addClass('fav-active').attr('title', 'Remove from favourites');
@@ -298,6 +319,35 @@ $(document).ready(function() {
         $a[0].click();
         $a.remove();
         URL.revokeObjectURL(url);
+    });
+
+    // ── Load backup ───────────────────────────────────────────────────────
+    $(document).on('click', '#load-backup-btn', function(e) {
+        e.preventDefault();
+        $('#backup-file-input').trigger('click');
+    });
+
+    $(document).on('change', '#backup-file-input', function() {
+        var file = this.files[0];
+        if (!file) return;
+        if (!confirm('This will overwrite your current favourites, notes, and search configs with the backup. Continue?')) {
+            $(this).val('');
+            return;
+        }
+        var formData = new FormData();
+        formData.append('file', file);
+        $.ajax({
+            type: 'POST',
+            url: '/restore_backup',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function() { location.reload(); },
+            error: function(xhr) {
+                alert(xhr.responseJSON ? xhr.responseJSON.error : 'Error restoring backup');
+            }
+        });
+        $(this).val('');
     });
 
     // ── Tag filtering ──────────────────────────────────────────────────────

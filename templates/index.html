@@ -88,23 +88,40 @@
         <div id="new-config-form" style="display: none; margin-bottom: 20px;">
         <div class="config-edit-card">
             <label style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 6px;">Name <input type="text" class="config-input" id="new-cfg-name" placeholder="my-search" style="width: 250px;"></label>
-            <div class="config-form-grid">
-                <label>max_results <input type="text" class="config-input" id="new-cfg-max_results" value="100"></label>
-                <label>past_days <input type="text" class="config-input" id="new-cfg-past_days" value="30"></label>
-                <label>literal <select class="config-input" id="new-cfg-literal"><option value="true" selected>true</option><option value="false">false</option></select></label>
-                <label>run_scirate <select class="config-input" id="new-cfg-run_scirate"><option value="false" selected>false</option><option value="true">true</option></select></label>
-                <label>arxiv_sortby <select class="config-input" id="new-cfg-arxiv_sortby"><option value="submittedDate" selected>submittedDate</option><option value="relevance">relevance</option><option value="lastUpdatedDate">lastUpdatedDate</option></select></label>
-                <label>arxiv_sortorder <select class="config-input" id="new-cfg-arxiv_sortorder"><option value="descending" selected>descending</option><option value="ascending">ascending</option></select></label>
-                <label>sortby <input type="text" class="config-input" id="new-cfg-sortby" value="date, scirate" placeholder="date, scirate"></label>
-                <label>sortorder_rev <select class="config-input" id="new-cfg-sortorder_rev"><option value="true" selected>true</option><option value="false">false</option></select></label>
-                <label>and_or_sections <select class="config-input" id="new-cfg-and_or_sections"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
-                <label>and_or_keyauthors <select class="config-input" id="new-cfg-and_or_keyauthors"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
-                <label>and_or <select class="config-input" id="new-cfg-and_or"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
-                <label>and_or_keywords <select class="config-input" id="new-cfg-and_or_keywords"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
-                <label>sections <input type="text" class="config-input config-input-wide" id="new-cfg-sections" placeholder="quant-ph, cs.LG"></label>
-                <label>keyauthors <input type="text" class="config-input config-input-wide" id="new-cfg-keyauthors" placeholder="coles, babbush"></label>
-                <label>keywords <input type="text" class="config-input config-input-wide" id="new-cfg-keywords" placeholder="nisq, adiabatic"></label>
+
+            <div class="config-section-header">Search Query</div>
+            <div class="config-query-row">
+                <label title="arXiv category codes, comma-separated">Categories <input type="text" class="config-input" id="new-cfg-sections" placeholder="quant-ph, cs.LG"></label>
+                <label title="How to combine multiple categories: OR = any, AND = all, ANDNOT = exclude">join <select class="config-input" id="new-cfg-and_or_sections"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
             </div>
+            <div class="config-query-row">
+                <label title="Author last names, comma-separated">Authors <input type="text" class="config-input" id="new-cfg-keyauthors" placeholder="coles, babbush"></label>
+                <label title="How to combine multiple authors">join <select class="config-input" id="new-cfg-and_or_keyauthors"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+            </div>
+            <div class="config-query-row">
+                <label title="Search terms, comma-separated. Searched as exact phrases when 'Exact phrases' is enabled">Keywords <input type="text" class="config-input" id="new-cfg-keywords" placeholder="nisq, adiabatic"></label>
+                <label title="How to combine multiple keywords">join <select class="config-input" id="new-cfg-and_or_keywords"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+            </div>
+            <div class="config-options-row" style="margin-top: 6px;">
+                <label title="Search keywords as exact quoted phrases">Exact phrases <select class="config-input" id="new-cfg-literal"><option value="true" selected>true</option><option value="false">false</option></select></label>
+                <label title="How to combine author results with keyword results">Authors ↔ Keywords <select class="config-input" id="new-cfg-and_or"><option value="+OR+" selected>OR</option><option value="+AND+">AND</option><option value="+ANDNOT+">ANDNOT</option></select></label>
+            </div>
+
+            <div class="config-section-header">Results</div>
+            <div class="config-options-row cols-3">
+                <label title="Maximum papers to fetch from arXiv (1-500)">Max results <input type="text" class="config-input" id="new-cfg-max_results" value="100"></label>
+                <label title="Only show papers from the last N days">Past days <input type="text" class="config-input" id="new-cfg-past_days" value="30"></label>
+                <label title="Fetch community scores from Scirate (slower)">Scirate scores <select class="config-input" id="new-cfg-run_scirate"><option value="false" selected>false</option><option value="true">true</option></select></label>
+            </div>
+
+            <div class="config-section-header">Sorting</div>
+            <div class="config-options-row cols-4">
+                <label title="How arXiv sorts API results">arXiv sort by <select class="config-input" id="new-cfg-arxiv_sortby"><option value="submittedDate" selected>submittedDate</option><option value="relevance">relevance</option><option value="lastUpdatedDate">lastUpdatedDate</option></select></label>
+                <label title="Sort direction for arXiv results">Order <select class="config-input" id="new-cfg-arxiv_sortorder"><option value="descending" selected>descending</option><option value="ascending">ascending</option></select></label>
+                <label title="Additional sort fields applied after fetching, comma-separated (e.g. date, scirate)">Local sort by <input type="text" class="config-input" id="new-cfg-sortby" value="date, scirate" placeholder="date, scirate"></label>
+                <label title="Sort in descending order">Reverse <select class="config-input" id="new-cfg-sortorder_rev"><option value="true" selected>true</option><option value="false">false</option></select></label>
+            </div>
+
             <div style="margin-top: 8px;">
                 <button type="button" class="tools tools-box" id="create-config-btn">create</button>
                 <button type="button" class="tools tools-box" onclick="document.getElementById('new-config-form').style.display='none'">cancel</button>
@@ -125,22 +142,37 @@
         </button>
         <div id="cfg-{{ loop.index }}" class="collapse">
             <div class="config-edit-card">
-                <div class="config-form-grid">
-                    <label>max_results <input type="text" class="config-input" data-field="max_results" value="{{ search_ele.max_results }}"></label>
-                    <label>past_days <input type="text" class="config-input" data-field="past_days" value="{{ search_ele.past_days }}"></label>
-                    <label>literal <select class="config-input" data-field="literal"><option value="true" {{ 'selected' if search_ele.literal }}>true</option><option value="false" {{ 'selected' if not search_ele.literal }}>false</option></select></label>
-                    <label>run_scirate <select class="config-input" data-field="run_scirate"><option value="false" {{ 'selected' if not search_ele.run_scirate }}>false</option><option value="true" {{ 'selected' if search_ele.run_scirate }}>true</option></select></label>
-                    <label>arxiv_sortby <select class="config-input" data-field="arxiv_sortby"><option value="submittedDate" {{ 'selected' if search_ele.arxiv_sortby == 'submittedDate' }}>submittedDate</option><option value="relevance" {{ 'selected' if search_ele.arxiv_sortby == 'relevance' }}>relevance</option><option value="lastUpdatedDate" {{ 'selected' if search_ele.arxiv_sortby == 'lastUpdatedDate' }}>lastUpdatedDate</option></select></label>
-                    <label>arxiv_sortorder <select class="config-input" data-field="arxiv_sortorder"><option value="descending" {{ 'selected' if search_ele.arxiv_sortorder == 'descending' }}>descending</option><option value="ascending" {{ 'selected' if search_ele.arxiv_sortorder == 'ascending' }}>ascending</option></select></label>
-                    <label>sortby <input type="text" class="config-input" data-field="sortby" value="{{ search_ele.sortby|join(', ') }}"></label>
-                    <label>sortorder_rev <select class="config-input" data-field="sortorder_rev"><option value="true" {{ 'selected' if search_ele.sortorder_rev }}>true</option><option value="false" {{ 'selected' if not search_ele.sortorder_rev }}>false</option></select></label>
-                    <label>and_or_sections <select class="config-input" data-field="and_or_sections"><option value="+OR+" {{ 'selected' if search_ele.and_or_sections == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_sections == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_sections == '+ANDNOT+' }}>ANDNOT</option></select></label>
-                    <label>and_or_keyauthors <select class="config-input" data-field="and_or_keyauthors"><option value="+OR+" {{ 'selected' if search_ele.and_or_keyauthors == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keyauthors == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keyauthors == '+ANDNOT+' }}>ANDNOT</option></select></label>
-                    <label>and_or <select class="config-input" data-field="and_or"><option value="+OR+" {{ 'selected' if search_ele.and_or == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or == '+ANDNOT+' }}>ANDNOT</option></select></label>
-                    <label>and_or_keywords <select class="config-input" data-field="and_or_keywords"><option value="+OR+" {{ 'selected' if search_ele.and_or_keywords == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keywords == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keywords == '+ANDNOT+' }}>ANDNOT</option></select></label>
-                    <label>sections <input type="text" class="config-input config-input-wide" data-field="sections" value="{{ search_ele.sections|join(', ') }}"></label>
-                    <label>keyauthors <input type="text" class="config-input config-input-wide" data-field="keyauthors" value="{{ search_ele.keyauthors|join(', ') }}"></label>
-                    <label>keywords <input type="text" class="config-input config-input-wide" data-field="keywords" value="{{ search_ele.keywords|join(', ') }}"></label>
+                <div class="config-section-header">Search Query</div>
+                <div class="config-query-row">
+                    <label title="arXiv category codes, comma-separated">Categories <input type="text" class="config-input" data-field="sections" value="{{ search_ele.sections|join(', ') }}"></label>
+                    <label title="How to combine multiple categories: OR = any, AND = all, ANDNOT = exclude">join <select class="config-input" data-field="and_or_sections"><option value="+OR+" {{ 'selected' if search_ele.and_or_sections == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_sections == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_sections == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                </div>
+                <div class="config-query-row">
+                    <label title="Author last names, comma-separated">Authors <input type="text" class="config-input" data-field="keyauthors" value="{{ search_ele.keyauthors|join(', ') }}"></label>
+                    <label title="How to combine multiple authors">join <select class="config-input" data-field="and_or_keyauthors"><option value="+OR+" {{ 'selected' if search_ele.and_or_keyauthors == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keyauthors == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keyauthors == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                </div>
+                <div class="config-query-row">
+                    <label title="Search terms, comma-separated. Searched as exact phrases when 'Exact phrases' is enabled">Keywords <input type="text" class="config-input" data-field="keywords" value="{{ search_ele.keywords|join(', ') }}"></label>
+                    <label title="How to combine multiple keywords">join <select class="config-input" data-field="and_or_keywords"><option value="+OR+" {{ 'selected' if search_ele.and_or_keywords == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or_keywords == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or_keywords == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                </div>
+                <div class="config-options-row" style="margin-top: 6px;">
+                    <label title="Search keywords as exact quoted phrases">Exact phrases <select class="config-input" data-field="literal"><option value="true" {{ 'selected' if search_ele.literal }}>true</option><option value="false" {{ 'selected' if not search_ele.literal }}>false</option></select></label>
+                    <label title="How to combine author results with keyword results">Authors ↔ Keywords <select class="config-input" data-field="and_or"><option value="+OR+" {{ 'selected' if search_ele.and_or == '+OR+' }}>OR</option><option value="+AND+" {{ 'selected' if search_ele.and_or == '+AND+' }}>AND</option><option value="+ANDNOT+" {{ 'selected' if search_ele.and_or == '+ANDNOT+' }}>ANDNOT</option></select></label>
+                </div>
+
+                <div class="config-section-header">Results</div>
+                <div class="config-options-row cols-3">
+                    <label title="Maximum papers to fetch from arXiv (1-500)">Max results <input type="text" class="config-input" data-field="max_results" value="{{ search_ele.max_results }}"></label>
+                    <label title="Only show papers from the last N days">Past days <input type="text" class="config-input" data-field="past_days" value="{{ search_ele.past_days }}"></label>
+                    <label title="Fetch community scores from Scirate (slower)">Scirate scores <select class="config-input" data-field="run_scirate"><option value="false" {{ 'selected' if not search_ele.run_scirate }}>false</option><option value="true" {{ 'selected' if search_ele.run_scirate }}>true</option></select></label>
+                </div>
+
+                <div class="config-section-header">Sorting</div>
+                <div class="config-options-row cols-4">
+                    <label title="How arXiv sorts API results">arXiv sort by <select class="config-input" data-field="arxiv_sortby"><option value="submittedDate" {{ 'selected' if search_ele.arxiv_sortby == 'submittedDate' }}>submittedDate</option><option value="relevance" {{ 'selected' if search_ele.arxiv_sortby == 'relevance' }}>relevance</option><option value="lastUpdatedDate" {{ 'selected' if search_ele.arxiv_sortby == 'lastUpdatedDate' }}>lastUpdatedDate</option></select></label>
+                    <label title="Sort direction for arXiv results">Order <select class="config-input" data-field="arxiv_sortorder"><option value="descending" {{ 'selected' if search_ele.arxiv_sortorder == 'descending' }}>descending</option><option value="ascending" {{ 'selected' if search_ele.arxiv_sortorder == 'ascending' }}>ascending</option></select></label>
+                    <label title="Additional sort fields applied after fetching, comma-separated (e.g. date, scirate)">Local sort by <input type="text" class="config-input" data-field="sortby" value="{{ search_ele.sortby|join(', ') }}"></label>
+                    <label title="Sort in descending order">Reverse <select class="config-input" data-field="sortorder_rev"><option value="true" {{ 'selected' if search_ele.sortorder_rev }}>true</option><option value="false" {{ 'selected' if not search_ele.sortorder_rev }}>false</option></select></label>
                 </div>
                 <div style="margin-top: 8px;">
                     <button class="tools tools-box save-config-btn">save</button>

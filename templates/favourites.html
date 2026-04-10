@@ -8,12 +8,12 @@
             <div class="dropdown d-inline-block">
                 <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">sort</button>
                 <ul class="dropdown-menu stats-dropdown-menu" style="min-width: 150px; padding: 6px 0;">
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="added-at" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Date added (newest)</a></li>
+                    <li><a class="dropdown-item sort-option" href="#" data-sort="added-at" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Date added (oldest)</a></li>
                     <li><a class="dropdown-item sort-option" href="#" data-sort="date" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Date (newest)</a></li>
                     <li><a class="dropdown-item sort-option" href="#" data-sort="date" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Date (oldest)</a></li>
                     <li><a class="dropdown-item sort-option" href="#" data-sort="title" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Title (A-Z)</a></li>
                     <li><a class="dropdown-item sort-option" href="#" data-sort="title" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Title (Z-A)</a></li>
-                    <li><a class="dropdown-item sort-option" href="#" data-sort="added-at" data-order="desc" style="color:var(--c-primary);font-size:0.85rem;">Date added (newest)</a></li>
-                    <li><a class="dropdown-item sort-option" href="#" data-sort="added-at" data-order="asc" style="color:var(--c-primary);font-size:0.85rem;">Date added (oldest)</a></li>
                 </ul>
             </div>
             <input type="text" id="filter-input" class="filter-input" placeholder="filter papers..." autocomplete="off">
@@ -46,7 +46,7 @@
     <div class="paper">
         <h3 class="title"><a href="{{ paper.abs_url }}" target="_blank">{{ paper.title }}</a></h3>
         <p class="authors">{{ paper.authors }}</p>
-        <p class="authors">{{ paper.date }} - {{ paper.category }}{% if paper.added_at %} &nbsp;<span style="font-size:0.8rem;opacity:0.6;">starred: {{ paper.added_at }}</span>{% endif %}
+        <p class="authors">{{ paper.date }} - {{ paper.category }}{% if paper.added_at %} &nbsp;<span class="filter-exclude" style="font-size:0.8rem;opacity:0.6;">starred: {{ paper.added_at }}</span>{% endif %}
             <a class="icons" href="{{ paper.pdf_url }}" target="_blank" title="Open PDF">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16">
                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
@@ -117,7 +117,7 @@
                 <div class="card card-body">
                     <textarea class="notes-textarea" placeholder="Your notes..."></textarea>
                     <div class="notes-rendered" style="display:none;"></div>
-                    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                    <div style="margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
                         <button class="tools tools-box save-note-btn"
                             data-arxiv-id="{{ paper.arxiv_id }}"
                             data-title="{{ paper.title|e }}"

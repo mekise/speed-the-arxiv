@@ -91,6 +91,28 @@ def backup():
                      as_attachment=True,
                      download_name=f'speed-the-arxiv-backup_{timestamp}.zip')
 
+@app.route("/restore_backup", methods=['POST'])
+def restore_backup():
+    import zipfile, io
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    f = request.files['file']
+    if not f.filename.endswith('.zip'):
+        return jsonify({"error": "File must be a .zip"}), 400
+    try:
+        buf = io.BytesIO(f.read())
+        with zipfile.ZipFile(buf, 'r') as zf:
+            allowed_prefixes = ('favourites/', 'notes/', 'search/')
+            for name in zf.namelist():
+                if not name.startswith(allowed_prefixes):
+                    continue
+                if '..' in name or name.startswith('/'):
+                    continue
+                zf.extract(name, '.')
+    except zipfile.BadZipFile:
+        return jsonify({"error": "Invalid zip file"}), 400
+    return jsonify({"restored": True})
+
 @app.route("/favourites", methods=['GET'])
 def favourites():
     papers = load_favourites()

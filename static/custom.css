@@ -278,6 +278,10 @@ mjx-container:not([display="true"]) {
     background-color: var(--c-highlight);
 }
 
+.highlight-active {
+    border-color: var(--c-highlight) !important;
+}
+
 .pagination-controls {
     text-align: center;
     margin: 20px 0 40px 0;

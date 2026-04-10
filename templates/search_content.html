@@ -43,8 +43,8 @@
                 </ul>
             </div>
             <button class="tools tools-box" onclick="toggleAllAbstracts()">expand all abstracts</button>
-            <button class="tools tools-box" onclick="highlight({{ keywords }})">highlight keywords</button>
-            <button class="tools tools-box" onclick="highlight({{ keyauthors }})">highlight keyauthors</button>
+            <button class="tools tools-box" data-highlight-type="keywords" onclick="highlight({{ keywords }}, 'keywords')">highlight keywords</button>
+            <button class="tools tools-box" data-highlight-type="keyauthors" onclick="highlight({{ keyauthors }}, 'keyauthors')">highlight keyauthors</button>
             <div class="dropdown d-inline-block">
                 <button class="tools tools-box dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     Stats ({{ papers|length }} papers)

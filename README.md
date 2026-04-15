@@ -2,40 +2,27 @@
 
 You know the drill. Wake up, coffee, arXiv. Same sections, same keywords, same authors — every single day. Speed-the-arxiv exists so you can do that in seconds instead of minutes, and maybe enjoy the coffee a bit more.
 
-Define your searches in `.yaml` configs (or create them right from the UI), hit a button, and get a clean page of results with collapsible abstracts, LaTeX rendering, SciRate scores, and one-click BibTeX — no copy-pasting DOIs into twelve different tabs.
+Define your searches in `.yaml` configs (or create them right from the UI), hit a button, and get a clean page of results with SciRate scores, one-click BibTeX, PDF access, notes, and favourites — no copy-pasting DOIs into twelve different tabs.
 
-Try it with limited functionality: https://mekise.pythonanywhere.com/
+## Installation
 
-## Setup
-
-Clone the repository:
-
-```
-git clone https://github.com/mekise/speed-the-arxiv.git
-cd speed-the-arxiv
-```
-
-Install dependencies using `setup.py`:
-
-```
-pip install .
-```
-
-Or install them manually:
-
-```
-pip install flask requests feedparser pyyaml habanero waitress beautifulsoup4 aiohttp
+```bash
+pip install speed-the-arxiv
 ```
 
 ## Usage
 
-1. Edit `search/config.yaml` to set your sections, keywords, and authors. You can also create, edit, duplicate, and delete configs directly from the UI.
-2. Run the app:
+1. Run the app:
+   ```bash
+   speedthearxiv
    ```
-   python speedthearxiv.py
-   ```
-3. A browser window opens at `http://localhost:8080/`. Select a search from the landing page — cache age is displayed next to each search so you know how fresh the results are.
-4. Results are loaded via AJAX with an inline spinner on the clicked button. Use the highlight buttons, sort controls, text filter, and pagination to navigate results.
+2. A browser window opens at `http://localhost:8080/`. The home page offers four tools:
+   - **speed-the-arxiv** — run your preset `.yaml` searches against the arXiv API.
+   - **search-the-arxiv** — direct free-text search of the arXiv API.
+   - **layer-the-arxiv** — browse arxiv.org directly with your speed-the-arxiv tools (favourites, notes, BibTeX) overlaid on top.
+   - **search-the-crossref** — look up any DOI and get a formatted BibTeX entry instantly.
+
+3. Edit or create search configs from the UI, or drop `.yaml` files in the `search/` directory. Cache age is displayed next to each search so you know how fresh the results are.
 
 ## Search configuration
 
@@ -60,20 +47,19 @@ See `search/config.yaml` for a complete example.
 
 ## Features
 
-- **Configurable searches** — sections, keywords, authors, logical operators, date ranges, all in tidy `.yaml` files you can create, edit, duplicate, and delete from the browser.
-- **Dark & light theme** — because not everyone wants to stare into the void (or into the sun).
-- **Sort, filter, paginate** — sort by date, SciRate score, or title. Filter results in real time. 25 papers per page so your browser doesn't melt.
-- **SciRate scores** — fetched asynchronously with concurrency limits and timeouts, so you get scores without hammering the internet.
-- **BibTeX on demand** — auto-generated for every paper, copy to clipboard with one click. Need a specific DOI? The Crossref lookup on the landing page has you covered.
+- **Preset searches** — define sections, keywords, authors, logical operators, and date ranges in tidy `.yaml` files you can create, edit, duplicate, and delete from the browser.
+- **arXiv layer** — browse arxiv.org natively with your tools (favourites, notes, BibTeX) injected into every paper listing.
+- **SciRate scores** — fetched asynchronously so you see community interest at a glance without hammering the API.
+- **BibTeX on demand** — auto-generated for every paper, copy to clipboard with one click. Crossref DOI lookup also available from the home page.
+- **Favourites & notes** — star papers and attach personal notes, persisted across sessions.
 - **Keyword & author highlighting** — toggle-able, so the important bits jump out at you.
+- **Sort, filter, paginate** — sort by date, SciRate score, or title; filter results in real time.
 - **MathJax** — LaTeX in titles and abstracts rendered properly, as nature intended.
+- **Dark & light theme** — because not everyone wants to stare into the void (or into the sun).
 - **Caching** — results are cached locally with a visible age indicator so you know exactly how stale your data is.
-- **Robust error handling** — timeouts, API failures, and unreachable endpoints all get friendly messages instead of blank screens.
 
-## Why no ML?
+## Screenshots
 
-A recommendation engine narrows your reading to papers that look like what you already read. That's great for efficiency, terrible for serendipity. Speed-the-arxiv casts a wider net on purpose — you set the parameters, the search distills the field, and every now and then something unexpected catches your eye. That's the good stuff.
+![Home](https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv_home.png)
 
-## Screenshot
-
-![speed-the-arxiv](https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv.png?raw=true)
+![Results](https://github.com/mekise/speed-the-arxiv/raw/main/screenshot/speedthearxiv_results.png)

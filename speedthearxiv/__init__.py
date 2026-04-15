@@ -1306,6 +1306,26 @@ def _make_layer_paper(arxiv_id, title, authors, summary, category, date=''):
         'related_doi': '',
     }
 
+@app.route("/get_abstract/<arxiv_id>")
+def get_abstract(arxiv_id):
+    if not re.match(r'^\d{4}\.\d{4,5}$', arxiv_id):
+        return jsonify({'error': 'Invalid arxiv ID'}), 400
+    try:
+        resp = requests.get(f"https://arxiv.org/abs/{arxiv_id}",
+                            headers=ARXIV_HEADERS, timeout=15)
+    except Exception:
+        return jsonify({'error': 'Could not reach arxiv.org'}), 503
+    if resp.status_code != 200:
+        return jsonify({'error': f'arxiv.org returned {resp.status_code}'}), 502
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    abstract_el = soup.find('blockquote', class_='abstract')
+    if abstract_el:
+        text = _layer_text(abstract_el, 'Abstract:')
+    else:
+        meta = soup.find('meta', {'name': 'citation_abstract'})
+        text = meta['content'].strip() if meta else ''
+    return jsonify({'abstract': text})
+
 # ── end Layer the Arxiv ─────────────────────────────────────────────────
 
 def main():

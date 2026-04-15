@@ -124,6 +124,24 @@ $(document).ready(function() {
         });
     });
 
+    // Abstract panel: lazy-load only for panels without a pre-rendered summary
+    $(document).on('show.bs.collapse', '.abstract-panel-lazy', function() {
+        var $panel = $(this);
+        if ($panel.data('abstract-loaded')) return;
+        var arxivId = $panel.attr('data-arxiv-id');
+        var $placeholder = $panel.find('.abstract-placeholder');
+        $.getJSON('/get_abstract/' + arxivId, function(res) {
+            $placeholder.text(res.abstract || 'Abstract not available.');
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetClear([$placeholder[0]]);
+                MathJax.typesetPromise([$placeholder[0]]);
+            }
+        }).fail(function() {
+            $placeholder.text('Could not load abstract.');
+        });
+        $panel.data('abstract-loaded', true);
+    });
+
     // Notes panel: auto-show abstract and load content on open
     $(document).on('show.bs.collapse', '.notes-panel', function() {
         var $panel = $(this);

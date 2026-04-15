@@ -64,14 +64,12 @@
 
 {% macro abstract_notes(paper, summary_id, notes_id, abstract_open=false) -%}
 <p>
-    {% if paper.summary %}
     <button class="collapsible" type="button" aria-expanded="{{ 'true' if abstract_open else 'false' }}" data-bs-toggle="collapse" data-bs-target="#{{ summary_id }}">
         Abstract
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
             <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
         </svg>
     </button>
-    {% endif %}
     <button class="collapsible" type="button" aria-expanded="false" data-bs-toggle="collapse" data-bs-target="#{{ notes_id }}">
         Notes
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
@@ -80,11 +78,15 @@
     </button>
 </p>
 <div class="abstract-notes-wrapper">
+    {% if paper.summary %}
     <div id="{{ summary_id }}" class="collapse{{ ' show' if abstract_open else '' }} abstract-panel">
-        {% if paper.summary %}
         <div class="card card-body"><p style="margin-bottom:0">{{ paper.summary }}</p></div>
-        {% endif %}
     </div>
+    {% else %}
+    <div id="{{ summary_id }}" class="collapse{{ ' show' if abstract_open else '' }} abstract-panel abstract-panel-lazy" data-arxiv-id="{{ paper.arxiv_id }}">
+        <div class="card card-body"><p style="margin-bottom:0" class="abstract-placeholder"><span class="spinner-inline"></span></p></div>
+    </div>
+    {% endif %}
     <div id="{{ notes_id }}" class="collapse notes-panel" data-arxiv-id="{{ paper.arxiv_id }}">
         <div class="card card-body">
             <textarea class="notes-textarea" placeholder="Your notes..."></textarea>

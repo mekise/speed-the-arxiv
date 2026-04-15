@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speed-the-arxiv"
-version = "0.1.0"
+version = "0.1.1"
 description = "A web app for searching and managing arXiv papers with SciRate integration"
 readme = "README.md"
 license = {text = "MIT"}

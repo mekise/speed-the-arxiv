@@ -11,6 +11,45 @@ $(document).ready(function() {
         event.preventDefault();
     });
 
+    $(document).on('click', '#fetch-scirates-btn', function(event) {
+        event.preventDefault();
+        var value = $(this).data('search');
+        loadSearch('/fetch_scirates', value, $(this));
+    });
+
+    $(document).on('click', '.fetch-single-scirate-btn', function(event) {
+        event.preventDefault();
+        var $btn = $(this);
+        if ($btn.prop('disabled')) return;
+        var arxivId = $btn.attr('data-arxiv-id');
+        var search = $btn.attr('data-search') || '';
+        var origHtml = $btn.html();
+        $btn.html('<span class="spinner-inline"></span>');
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: '/fetch_scirate',
+            contentType: 'application/json',
+            data: JSON.stringify({ arxiv_id: arxivId, search: search }),
+            success: function(res) {
+                $btn.html(origHtml);
+                $btn.prop('disabled', false);
+                var $wrapper = $btn.closest('.paper-wrapper');
+                var $val = $wrapper.find('.scirate-value');
+                $val.text(res.scirate);
+                $val.removeClass('scirate-unfetched');
+                $wrapper.attr('data-scirate', res.scirate);
+            },
+            error: function(xhr) {
+                $btn.html(origHtml);
+                $btn.prop('disabled', false);
+                var msg = 'Error fetching scirate.';
+                try { msg = xhr.responseJSON.error || msg; } catch(e) {}
+                alert(msg);
+            }
+        });
+    });
+
     // Arxiv ad-hoc search form
     $('#arxiv-search-form').on('submit', function(event) {
         event.preventDefault();

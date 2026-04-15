@@ -246,6 +246,10 @@ mjx-container:not([display="true"]) {
     margin-left: 10px;
 }
 
+.scirate-value.scirate-unfetched {
+    opacity: 0.4;
+}
+
 .tools {
     background-color: transparent;
     color: var(--c-primary);

@@ -35,18 +35,24 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 from habanero import cn
 from bs4 import BeautifulSoup
 
+import pathlib
+
 app_port = 8080
 app = Flask(__name__)
-CACHE_DIR = './cache'
-os.makedirs(CACHE_DIR, exist_ok=True)
-FAVOURITES_DIR = './favourites'
-os.makedirs(FAVOURITES_DIR, exist_ok=True)
+
+# Data directories - configurable via SPEEDTHEARXIV_DATA env var
+# Defaults to ~/.speedthearxiv/ so installed packages work out of the box
+DATA_DIR = pathlib.Path(os.environ.get('SPEEDTHEARXIV_DATA', pathlib.Path.home() / '.speedthearxiv'))
+CACHE_DIR = str(DATA_DIR / 'cache')
+SEARCH_DIR = str(DATA_DIR / 'search')
+FAVOURITES_DIR = str(DATA_DIR / 'favourites')
+NOTES_DIR = str(DATA_DIR / 'notes')
+for _d in (CACHE_DIR, SEARCH_DIR, FAVOURITES_DIR, NOTES_DIR):
+    os.makedirs(_d, exist_ok=True)
 FAVOURITES_FILE = os.path.join(FAVOURITES_DIR, 'favourites.json')
-NOTES_DIR = './notes'
-os.makedirs(NOTES_DIR, exist_ok=True)
 
 # Migrate legacy favourites.json to new location
-_legacy = './favourites.json'
+_legacy = str(DATA_DIR / 'favourites.json')
 if os.path.exists(_legacy) and not os.path.exists(FAVOURITES_FILE):
     import shutil
     shutil.move(_legacy, FAVOURITES_FILE)
@@ -77,13 +83,13 @@ def backup():
     import zipfile, io
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for folder in (FAVOURITES_DIR, NOTES_DIR, './search'):
+        for folder in (FAVOURITES_DIR, NOTES_DIR, SEARCH_DIR):
             if not os.path.isdir(folder):
                 continue
             for root, _dirs, files in os.walk(folder):
                 for fname in files:
                     fpath = os.path.join(root, fname)
-                    arcname = os.path.relpath(fpath, '.')
+                    arcname = os.path.relpath(fpath, str(DATA_DIR))
                     zf.write(fpath, arcname)
     buf.seek(0)
     timestamp = dt.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -108,7 +114,7 @@ def restore_backup():
                     continue
                 if '..' in name or name.startswith('/'):
                     continue
-                zf.extract(name, '.')
+                zf.extract(name, str(DATA_DIR))
     except zipfile.BadZipFile:
         return jsonify({"error": "Invalid zip file"}), 400
     return jsonify({"restored": True})
@@ -494,8 +500,8 @@ def doi():
     return _render_index(bibtex=bibtex)
 
 def _render_index(**kwargs):
-    searches = [os.path.splitext(file)[0] for file in os.listdir('./search') if file.endswith('.yaml')]
-    searches.sort(key=lambda x: os.path.getmtime('./search/'+x+'.yaml'), reverse=True)
+    searches = [os.path.splitext(file)[0] for file in os.listdir(SEARCH_DIR) if file.endswith('.yaml')]
+    searches.sort(key=lambda x: os.path.getmtime(os.path.join(SEARCH_DIR, x + '.yaml')), reverse=True)
     search_list = [read_config(s) for s in searches]
     now = dt.datetime.now()
     for item in search_list:
@@ -624,7 +630,7 @@ def save_adhoc_search():
     name = data.get('name', '').strip()
     if not name or '/' in name or '\\' in name or '..' in name:
         return jsonify({"error": "Invalid search name"}), 400
-    config_path = os.path.join('search', name + '.yaml')
+    config_path = os.path.join(SEARCH_DIR, name + '.yaml')
     if os.path.exists(config_path):
         return jsonify({"error": "A search with this name already exists"}), 409
 
@@ -859,7 +865,7 @@ def save_cache(search_name, papers, fetched_at, config):
                    'papers': papers}, f)
 
 def read_config(name):
-    with open('search/'+str(name)+'.yaml', 'r') as file:
+    with open(os.path.join(SEARCH_DIR, str(name) + '.yaml'), 'r') as file:
         config = yaml.safe_load(file)
     return {
         "name": name,
@@ -963,7 +969,7 @@ def format_bibtex_string(input_string):
 @app.route('/open_folder', methods=['POST'])
 def open_folder():
     try:
-        folder_path = './search'
+        folder_path = SEARCH_DIR
         command = None
         if platform.system() == 'Linux':
             command = ['xdg-open', folder_path]
@@ -985,7 +991,7 @@ def save_config():
     name = data.get('name', '').strip()
     if not name or '/' in name or '\\' in name or '..' in name:
         return jsonify({"error": "Invalid config name"}), 400
-    config_path = os.path.join('search', name + '.yaml')
+    config_path = os.path.join(SEARCH_DIR, name + '.yaml')
     if not os.path.exists(config_path):
         return jsonify({"error": "Config not found"}), 404
     config = _build_config_dict(data)
@@ -999,7 +1005,7 @@ def new_config():
     name = data.get('name', '').strip()
     if not name or '/' in name or '\\' in name or '..' in name:
         return jsonify({"error": "Invalid config name"}), 400
-    config_path = os.path.join('search', name + '.yaml')
+    config_path = os.path.join(SEARCH_DIR, name + '.yaml')
     if os.path.exists(config_path):
         return jsonify({"error": "Config already exists"}), 409
     config = _build_config_dict(data)
@@ -1013,7 +1019,7 @@ def delete_config():
     name = data.get('name', '').strip()
     if not name or '/' in name or '\\' in name or '..' in name:
         return jsonify({"error": "Invalid config name"}), 400
-    config_path = os.path.join('search', name + '.yaml')
+    config_path = os.path.join(SEARCH_DIR, name + '.yaml')
     if not os.path.exists(config_path):
         return jsonify({"error": "Config not found"}), 404
     os.remove(config_path)
@@ -1028,7 +1034,7 @@ def get_config():
     name = data.get('name', '').strip()
     if not name or '/' in name or '\\' in name or '..' in name:
         return jsonify({"error": "Invalid config name"}), 400
-    config_path = os.path.join('search', name + '.yaml')
+    config_path = os.path.join(SEARCH_DIR, name + '.yaml')
     if not os.path.exists(config_path):
         return jsonify({"error": "Config not found"}), 404
     config = read_config(name)
@@ -1069,9 +1075,9 @@ def _build_config_dict(data):
 def layer_home():
     user_sections = set()
     try:
-        for fname in os.listdir('./search'):
+        for fname in os.listdir(SEARCH_DIR):
             if fname.endswith('.yaml'):
-                with open(os.path.join('search', fname)) as f:
+                with open(os.path.join(SEARCH_DIR, fname)) as f:
                     cfg = yaml.safe_load(f)
                 for s in cfg.get('keys', {}).get('sections', []):
                     user_sections.add(s)
@@ -1302,12 +1308,12 @@ def _make_layer_paper(arxiv_id, title, authors, summary, category, date=''):
 
 # ── end Layer the Arxiv ─────────────────────────────────────────────────
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
-if __name__ == "__main__":
+def main():
     import logging
     logging.getLogger('waitress.queue').setLevel(logging.ERROR)
     from waitress import serve
-    webbrowser.open('http://localhost:'+str(app_port)+'/', new=2)
+    webbrowser.open('http://localhost:' + str(app_port) + '/', new=2)
     serve(app, host="0.0.0.0", port=app_port, threads=8)
+
+if __name__ == "__main__":
+    main()

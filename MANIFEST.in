@@ -1,0 +1,2 @@
+recursive-include speedthearxiv/templates *
+recursive-include speedthearxiv/static *

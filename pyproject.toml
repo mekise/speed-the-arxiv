@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speed-the-arxiv"
+version = "0.1.0"
+description = "A web app for searching and managing arXiv papers with SciRate integration"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [{name = "Stefano Scali", email = "scali.stefano@gmail.com"}]
+keywords = ["arxiv", "research", "papers", "scirate", "bibtex", "crossref", "doi", "pdf", "metadata", "search", "webapp"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: Flask",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "flask>=2.0",
+    "requests",
+    "feedparser",
+    "pyyaml",
+    "habanero",
+    "waitress",
+    "beautifulsoup4",
+    "aiohttp",
+    "pymupdf",
+]
+
+[project.urls]
+Homepage = "https://github.com/mekise/speed-the-arxiv"
+Repository = "https://github.com/mekise/speed-the-arxiv"
+
+[project.scripts]
+speedthearxiv = "speedthearxiv:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["speedthearxiv*"]
+
+[tool.setuptools.package-data]
+speedthearxiv = [
+    "templates/**/*",
+    "static/**/*",
+]

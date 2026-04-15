@@ -346,7 +346,7 @@ def _fetch_doi_paper(doi):
             'summary': BeautifulSoup(msg.get('abstract') or '', 'html.parser').get_text().strip(),
             'bibtex': bibtex,
             'related_doi': doi,
-            'scirate': 0,
+            'scirate': None,
         }
     except Exception:
         return None
@@ -678,6 +678,59 @@ def refresh():
     config = read_config(data['search'])
     return do_fetch_and_render(config)
 
+@app.route("/fetch_scirate", methods=['POST'])
+def fetch_scirate_route():
+    data = request.get_json() or {}
+    arxiv_id = str(data.get('arxiv_id') or '').strip()
+    if not arxiv_id:
+        return jsonify({"error": "Missing arxiv_id"}), 400
+    scirates = asyncio.run(get_scirates_async([arxiv_id]))
+    scirate = scirates[0] if scirates else -1
+    search_name = str(data.get('search') or '').strip()
+    if search_name and '/' not in search_name and '\\' not in search_name and '..' not in search_name:
+        cached = load_cache(search_name)
+        if cached:
+            updated = False
+            for paper in cached['papers']:
+                if paper.get('arxiv_id') == arxiv_id:
+                    paper['scirate'] = scirate
+                    updated = True
+            if updated:
+                cache_path = os.path.join(CACHE_DIR, search_name + '.json')
+                with open(cache_path, 'w') as f:
+                    json.dump({'fetched_at': cached['fetched_at'],
+                               'config': cached.get('config'),
+                               'papers': cached['papers']}, f)
+    favs = load_favourites()
+    fav_updated = False
+    for fav in favs:
+        if fav.get('arxiv_id') == arxiv_id:
+            fav['scirate'] = scirate
+            fav_updated = True
+    if fav_updated:
+        save_favourites(favs)
+    return jsonify({"arxiv_id": arxiv_id, "scirate": scirate})
+
+@app.route("/fetch_scirates", methods=['POST'])
+def fetch_scirates_route():
+    data = request.get_json()
+    search_name = (data or {}).get('search', '').strip()
+    if not search_name or '/' in search_name or '\\' in search_name or '..' in search_name:
+        return jsonify({"error": "Invalid search name"}), 400
+    config = read_config(search_name)
+    cached = load_cache(search_name)
+    if not cached:
+        return jsonify({"error": "No cached results to update. Refresh the search first."}), 404
+    papers = cached['papers']
+    arxiv_ids = [p['arxiv_id'] for p in papers]
+    if arxiv_ids:
+        scirates = asyncio.run(get_scirates_async(arxiv_ids))
+        for paper, scirate in zip(papers, scirates):
+            paper['scirate'] = scirate
+    save_cache(search_name, papers, cached['fetched_at'], config)
+    config_changed = cached.get('config') is not None and cached['config'] != _search_params(config)
+    return render_search(config, papers, cached['fetched_at'], config_changed=config_changed)
+
 def do_fetch_and_render(config):
     query_sections = [f"cat:{section}" for section in config['sections']]
     query_keyauthors = [f"au:{keyauthor}" for keyauthor in config['keyauthors']]
@@ -726,7 +779,7 @@ def do_fetch_and_render(config):
         cutoff_date = dt.date.today() - dt.timedelta(days=config['past_days'])
         filtered = []
         for i, entry in enumerate(feeds.entries):
-            paper = process_entry(entry, cutoff_date, 0)
+            paper = process_entry(entry, cutoff_date, None)
             if paper:
                 filtered.append((i, paper))
         # Fetch scirates only for surviving papers
@@ -857,7 +910,7 @@ def process_entry(entry, cutoff_date, scirate):
 def process_entry_adhoc(entry):
     """Process an arxiv entry without date filtering (for ad-hoc searches)."""
     checkdate = entry.updated[0:10]
-    return _build_paper_dict(entry, checkdate, 0)
+    return _build_paper_dict(entry, checkdate, None)
 
 def _build_paper_dict(entry, checkdate, scirate):
     primary_cat = entry.get('arxiv_primary_category', {}).get('term', '')
@@ -875,9 +928,10 @@ def _build_paper_dict(entry, checkdate, scirate):
     related_doi = entry.get('arxiv_doi', '')
     doi = related_doi or f"10.48550/arXiv.{arxiv_id_clean}"
     doi_line = f"\tdoi={{{doi}}},\n" if doi else ""
+    authors_joined = " and ".join(author_names)
     bibtex = (f"@article{{{first_author}{year}{arxiv_id_clean},\n"
               f"\ttitle={{{entry.title}}},\n"
-              f"\tauthor={{{{" and ".join(author_names)}}}},\n"
+              f"\tauthor={{{{{authors_joined}}}}},\n"
               f"\tyear={{{year}}},\n"
               f"{doi_line}"
               f"\teprint={{{arxiv_id_clean}}},\n"
@@ -1242,7 +1296,7 @@ def _make_layer_paper(arxiv_id, title, authors, summary, category, date=''):
         'abs_url': f'https://arxiv.org/abs/{arxiv_id}',
         'pdf_url': f'https://arxiv.org/pdf/{arxiv_id}',
         'bibtex': bibtex,
-        'scirate': 0,
+        'scirate': None,
         'related_doi': '',
     }
 
